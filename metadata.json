@@ -1,0 +1,8 @@
+{
+  "name": " Marketing ZKH",
+  "description": "Hệ thống quản lý công việc, tiến độ, hiệu suất nhân sự  phòng Marketing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
