@@ -106,6 +106,24 @@ export default function App() {
     return () => clearInterval(timer);
   }, []);
 
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    const cached = localStorage.getItem('mkt_dark_mode');
+    if (cached) {
+      return cached === 'true';
+    }
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('mkt_dark_mode', 'true');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('mkt_dark_mode', 'false');
+    }
+  }, [isDarkMode]);
+
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -256,7 +274,7 @@ export default function App() {
     }
   }, []);
 
-  // Tự động kiểm tra hạn chót (Deadline Check Engine) cho các công việc trong 24 giờ tới
+  // Tự động kiểm tra hạn chót (Deadline Check Engine) và đồng bộ hóa trạng thái khi chỉnh sửa thủ công
   useEffect(() => {
     if (tasks.length === 0 || members.length === 0) return;
 
@@ -270,9 +288,36 @@ export default function App() {
     })();
 
     const now = new Date();
-    const newNotifications: AppNotification[] = [];
-    let hasNewNotifs = false;
 
+    // 1. Đồng bộ và làm sạch danh sách đã thông báo (notifiedIds):
+    // Giữ lại các ID thông báo thỏa mãn: tác vụ vẫn tồn tại, chưa hoàn thành, đúng thời hạn cũ, và thời hạn vẫn nằm trong vòng 24 giờ tới.
+    // Điều này cho phép hệ thống tự động tái thông báo nếu người dùng sửa ngày hạn về phạm vi 24h của tác vụ khác, hoặc kéo lùi lại.
+    const cleanedNotifiedIds = notifiedIds.filter(notifId => {
+      const parts = notifId.split('-');
+      const taskId = parts[0];
+      const deadlineStr = parts.slice(1).join('-'); // định dạng ngày đầy đủ
+      const task = tasks.find(t => t.id === taskId);
+      
+      if (!task || task.status === 'Completed') return false;
+      // Nếu thời hạn đã được chỉnh sửa thủ công khác với chuỗi đã lưu thì ID thông báo đó đã lỗi thời
+      if (task.deadline !== deadlineStr) return false;
+      
+      const deadlineDate = new Date(task.deadline);
+      if (isNaN(deadlineDate.getTime())) return false;
+      deadlineDate.setHours(23, 59, 59, 999);
+      
+      const diffTime = deadlineDate.getTime() - now.getTime();
+      const oneDayInMs = 24 * 60 * 60 * 1000;
+      return diffTime > 0 && diffTime <= oneDayInMs;
+    });
+
+    let hasLocalChanges = cleanedNotifiedIds.length !== notifiedIds.length;
+    const activeNotifiedIds = [...cleanedNotifiedIds];
+
+    const newNotifications: AppNotification[] = [];
+    let hasAlertedNew = false;
+
+    // 2. Kiểm tra và thêm thông báo mới cho các công việc sắp hết hạn trong 24 giờ
     tasks.forEach(task => {
       if (task.status === 'Completed') return;
       
@@ -290,9 +335,10 @@ export default function App() {
         // ID thông báo phân định duy nhất theo ID task và thời hạn
         const notificationUniqueId = `${task.id}-${task.deadline}`;
         
-        if (!notifiedIds.includes(notificationUniqueId)) {
-          notifiedIds.push(notificationUniqueId);
-          hasNewNotifs = true;
+        if (!activeNotifiedIds.includes(notificationUniqueId)) {
+          activeNotifiedIds.push(notificationUniqueId);
+          hasLocalChanges = true;
+          hasAlertedNew = true;
 
           // Tìm thành viên phụ trách
           const assignee = members.find(m => m.id === task.assigneeId);
@@ -326,17 +372,56 @@ export default function App() {
       }
     });
 
-    if (hasNewNotifs) {
-      localStorage.setItem(notifiedKey, JSON.stringify(notifiedIds));
+    if (hasLocalChanges) {
+      localStorage.setItem(notifiedKey, JSON.stringify(activeNotifiedIds));
     }
 
-    if (newNotifications.length > 0) {
-      // Đọc các thông báo cũ để gộp
-      const currentNotifications = JSON.parse(localStorage.getItem('mkt_notifications') || '[]');
-      const merged = [...newNotifications, ...currentNotifications];
+    // 3. Tự động thu hồi/dọn dẹp các thông báo cũ bị treo của các công việc đã hoàn thành, bị xóa hoặc được dời hạn chót ra xa
+    const currentNotifications: AppNotification[] = (() => {
+      try {
+        const cached = localStorage.getItem('mkt_notifications');
+        return cached ? JSON.parse(cached) : notifications;
+      } catch {
+        return notifications;
+      }
+    })();
+
+    const cleanExistingNotifs = currentNotifications.filter(notif => {
+      // Xác định đây có phải thông báo về hạn chót 24h
+      const isDeadlineNotif = notif.id.startsWith('notif-deadline-') || !!notif.taskId;
+      if (!isDeadlineNotif) return true;
+
+      // Lấy taskId
+      const tId = notif.taskId || notif.id.split('-').pop();
+      const associatedTask = tasks.find(t => t.id === tId);
+      
+      // Nếu công việc đã bị xóa hoặc đã chuyển sang trạng thái Hoàn thành -> Loại bỏ thông báo hết hạn
+      if (!associatedTask || associatedTask.status === 'Completed') return false;
+
+      // Nếu công việc đã được dời hạn chót ra ngoài vòng 24h -> Loại bỏ thông báo hết hạn cho bớt phiền phức
+      const dDate = new Date(associatedTask.deadline);
+      if (isNaN(dDate.getTime())) return false;
+      dDate.setHours(23, 59, 59, 999);
+      
+      const diff = dDate.getTime() - now.getTime();
+      const oneDayInMs = 24 * 60 * 60 * 1000;
+      const isCậnKề = diff > 0 && diff <= oneDayInMs;
+      
+      return isCậnKề;
+    });
+
+    const isNotifListPruned = cleanExistingNotifs.length !== currentNotifications.length;
+
+    if (newNotifications.length > 0 || isNotifListPruned) {
+      const merged = [...newNotifications, ...cleanExistingNotifs];
       setNotifications(merged);
       localStorage.setItem('mkt_notifications', JSON.stringify(merged));
-      triggerNotification(`🚨 Có công việc sắp hết hạn chót trong 24 giờ tới! Đã gửi thông báo phòng ban.`);
+      
+      if (hasAlertedNew && newNotifications.length > 0) {
+        triggerNotification(`🚨 Có công việc sắp hết hạn trong 24 giờ tới! Đã gửi thông báo đến các thành viên liên quan.`);
+      } else if (isNotifListPruned) {
+        triggerNotification(`⚖️ Hệ thống đã tự động gỡ bỏ/đồng bộ thông báo của các công việc đã hoàn thành hoặc dời hạn chót.`);
+      }
     }
   }, [tasks, members]);
 
@@ -862,6 +947,21 @@ export default function App() {
                 <span>Hệ thống: <strong>{appTime.toLocaleString('vi-VN')}</strong></span>
               </div>
 
+              {/* Chế độ Sáng/Tối (Dark Mode Toggle) */}
+              <button
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                className="p-2.5 rounded-xl hover:bg-slate-100 border border-slate-200 dark:border-slate-700 transition cursor-pointer text-slate-600 dark:text-slate-300 block focus:outline-none shrink-0"
+                aria-label="Toggle Dark Mode"
+                title={isDarkMode ? 'Chuyển sang chế độ Sáng (Ban ngày)' : 'Chuyển sang chế độ Tối (Ban đêm)'}
+                id="dark_mode_toggle_btn"
+              >
+                {isDarkMode ? (
+                  <Sun className="w-4 h-4 text-amber-500 animate-[spin_10s_linear_infinite]" />
+                ) : (
+                  <Moon className="w-4 h-4 text-indigo-500" />
+                )}
+              </button>
+
               {/* Notification bubble with interactive dropdown */}
               <div className="relative pointer-events-auto" id="notification_dropdown_wrapper">
                 <button
@@ -1068,6 +1168,13 @@ export default function App() {
           id="mobile_tab_btn_links"
         >
           🔗 Liên kết
+        </button>
+        <button
+          onClick={() => setIsDarkMode(!isDarkMode)}
+          className="px-3.5 py-2 rounded-xl transition-all text-slate-705 bg-slate-50 border border-slate-200 font-bold flex items-center gap-1.5"
+          id="mobile_tab_btn_darkmode"
+        >
+          {isDarkMode ? '☀️ Sáng' : '🌙 Tối'}
         </button>
         <button
           onClick={handleLogout}

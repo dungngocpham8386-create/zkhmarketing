@@ -1,6 +1,219 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: "Montserrat", ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+/* Beautiful custom flat dark mode overrides to support seamless nighttime view */
+.dark html, .dark body {
+  background-color: #0f172a !important;
+  color: #f1f5f9 !important;
+}
+
+.dark #marketing_app_container {
+  background-color: #0f172a !important;
+  color: #f1f5f9 !important;
+}
+
+/* Header transition */
+.dark header {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+.dark header h1 {
+  color: #f8fafc !important;
+}
+
+.dark header nav button {
+  color: #94a3b8 !important;
+}
+
+.dark header nav button:hover {
+  background-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.dark header .bg-indigo-50 {
+  background-color: #312e81 !important;
+  color: #e0e7ff !important;
+}
+
+/* Universal elements and cards mapping */
+.dark .bg-white {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+.dark .text-slate-900, 
+.dark .text-slate-800, 
+.dark .text-slate-850,
+.dark .text-slate-750 {
+  color: #f1f5f9 !important;
+}
+
+.dark .text-slate-700, 
+.dark .text-slate-705, 
+.dark .text-slate-655,
+.dark .text-slate-650 {
+  color: #cbd5e1 !important;
+}
+
+.dark .text-slate-600 {
+  color: #94a3b8 !important;
+}
+
+.dark .text-slate-500, 
+.dark .text-slate-550 {
+  color: #64748b !important;
+}
+
+.dark .border-slate-100, 
+.dark .border-slate-150, 
+.dark .border-slate-200 {
+  border-color: #334155 !important;
+}
+
+.dark .bg-slate-50, 
+.dark .bg-slate-100,
+.dark .bg-slate-50\/50,
+.dark .bg-slate-50\/40 {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+}
+
+/* Modals & Inputs */
+.dark input, 
+.dark select, 
+.dark textarea {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+.dark input::placeholder,
+.dark select::placeholder,
+.dark textarea::placeholder {
+  color: #475569 !important;
+}
+
+.dark button:disabled,
+.dark input:disabled,
+.dark select:disabled {
+  background-color: #1e293b !important;
+  opacity: 0.65;
+}
+
+/* Dropdowns & Popovers */
+.dark #notif_dropdown_menu,
+.dark [id^="notif_dropdown_menu"] {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #334155 !important;
+}
+
+.dark [id^="notif_item_"]:hover {
+  background-color: #0f172a !important;
+}
+
+/* Alert Boxes & Badges */
+.dark .bg-rose-50 {
+  background-color: rgba(244, 63, 94, 0.1) !important;
+  border-color: rgba(244, 63, 94, 0.3) !important;
+}
+.dark .text-red-700, 
+.dark .text-red-600,
+.dark .text-red-650 {
+  color: #fda4af !important;
+}
+.dark .bg-red-50 {
+  background-color: rgba(239, 68, 68, 0.1) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+.dark .bg-emerald-50 {
+  background-color: rgba(16, 185, 129, 0.1) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+}
+.dark .text-emerald-700,
+.dark .text-emerald-600 {
+  color: #6ee7b7 !important;
+}
+
+.dark .bg-amber-50 {
+  background-color: rgba(245, 158, 11, 0.1) !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+.dark .text-amber-705,
+.dark .text-amber-700,
+.dark .text-amber-600 {
+  color: #fde047 !important;
+}
+
+.dark .bg-indigo-50 {
+  background-color: rgba(99, 102, 241, 0.1) !important;
+  border-color: rgba(99, 102, 241, 0.3) !important;
+}
+.dark .text-indigo-700 {
+  color: #818cf8 !important;
+}
+
+.dark .text-slate-650, 
+.dark .text-slate-705 {
+  color: #cbd5e1 !important;
+}
+
+.dark .bg-rose-50\/5 {
+  background-color: rgba(244, 63, 94, 0.05) !important;
+}
+
+.dark .text-indigo-650 {
+  color: #a5b4fc !important;
+}
+
+/* Sub-panels and auxiliary lines */
+.dark .bg-indigo-950 {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+}
+
+.dark footer {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #94a3b8 !important;
+}
+
+.dark footer .text-slate-700 {
+  color: #cbd5e1 !important;
+}
+
+/* Secondary Mobile nav bar helper overrides */
+.dark .md\:hidden.sticky {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+.dark .md\:hidden.sticky button {
+  background-color: #0f172a !important;
+  color: #cbd5e1 !important;
+}
+
+.dark .md\:hidden.sticky button:hover {
+  background-color: #334155 !important;
+}
+
+/* Recharts text override support */
+.dark .recharts-text {
+  fill: #94a3b8 !important;
+}
+.dark .recharts-cartesian-grid-line {
+  stroke: #334155 !important;
 }

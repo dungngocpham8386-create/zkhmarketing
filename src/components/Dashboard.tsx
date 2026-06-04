@@ -324,6 +324,82 @@ export default function Dashboard({
     });
   }, [tasks, CURRENT_DATE]);
 
+  // Tính toán xu hướng hiệu suất hoàn thành công việc và tương quan giải ngân ngân sách theo thời gian
+  const trendData = useMemo(() => {
+    const dateSet = new Set<string>();
+    
+    tasks.forEach(t => {
+      if (t.createdAt) dateSet.add(t.createdAt);
+      if (t.completedAt) dateSet.add(t.completedAt);
+      if (t.deadline) dateSet.add(t.deadline);
+    });
+    
+    invoices.forEach(inv => {
+      if (inv.date) dateSet.add(inv.date);
+    });
+    
+    const sortedDates = Array.from(dateSet)
+      .filter(d => d && !isNaN(Date.parse(d)))
+      .sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+      
+    if (sortedDates.length === 0) {
+      return [
+        { date: '01/05', 'Tỷ lệ hoàn thành (%)': 0, 'Ngân sách giải ngân (Triệu VNĐ)': 0, 'Tổng công việc': 0 },
+        { date: '10/05', 'Tỷ lệ hoàn thành (%)': 25, 'Ngân sách giải ngân (Triệu VNĐ)': 62, 'Tổng công việc': 3 },
+        { date: '15/05', 'Tỷ lệ hoàn thành (%)': 40, 'Ngân sách giải ngân (Triệu VNĐ)': 62, 'Tổng công việc': 5 },
+        { date: '20/05', 'Tỷ lệ hoàn thành (%)': 40, 'Ngân sách giải ngân (Triệu VNĐ)': 109, 'Tổng công việc': 8 },
+      ];
+    }
+
+    // Lấy tối đa 10 mốc thời gian đều nhau để biểu đồ không bị dày đặc
+    let filteredDates = sortedDates;
+    if (sortedDates.length > 10) {
+      const step = (sortedDates.length - 1) / 9;
+      const indices = Array.from({ length: 10 }, (_, i) => Math.round(i * step));
+      filteredDates = Array.from(new Set(indices.map(idx => sortedDates[idx])));
+    }
+
+    return filteredDates.map(dateStr => {
+      const targetDate = new Date(dateStr);
+      targetDate.setHours(23, 59, 59, 999);
+
+      // Công việc được bắt đầu trước mốc thời gian này
+      const tasksUpToDate = tasks.filter(t => new Date(t.createdAt).getTime() <= targetDate.getTime());
+      
+      // Công việc đã hoàn thành trước mốc thời gian này
+      const completedTasksUpToDate = tasks.filter(t => {
+        if (t.status !== 'Completed') return false;
+        const compDate = t.completedAt ? new Date(t.completedAt) : new Date(t.createdAt);
+        return compDate.getTime() <= targetDate.getTime();
+      });
+
+      const completionRate = tasksUpToDate.length > 0 
+        ? Math.round((completedTasksUpToDate.length / tasksUpToDate.length) * 100) 
+        : 0;
+
+      // Tổng ngân sách đã phê duyệt/thanh toán tính đến mốc thời gian này
+      const budgetSpent = invoices
+        .filter(inv => {
+          if (inv.status === 'Pending') return false;
+          const invDate = new Date(inv.date);
+          return invDate.getTime() <= targetDate.getTime();
+        })
+        .reduce((sum, inv) => sum + inv.totalAmount, 0);
+
+      const dateParts = dateStr.split('-');
+      const formattedLabel = dateParts.length >= 3 ? `${dateParts[2]}/${dateParts[1]}` : dateStr;
+
+      return {
+        date: formattedLabel,
+        fullDate: dateStr,
+        'Tỷ lệ hoàn thành (%)': completionRate,
+        'Ngân sách giải ngân (Triệu VNĐ)': Math.round(budgetSpent / 1000000),
+        'Công việc hoàn thành': completedTasksUpToDate.length,
+        'Tổng công việc': tasksUpToDate.length
+      };
+    });
+  }, [tasks, invoices]);
+
   return (
     <div className="space-y-8" id="dashboard_view">
       {/* Welcome Banner */}
@@ -611,6 +687,87 @@ export default function Dashboard({
               );
             })}
           </div>
+        </div>
+      </div>
+
+      {/* Xu hướng hiệu suất hoàn thành công việc và giải ngân ngân sách */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm" id="performance_budget_trend_card">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div>
+            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-indigo-600 animate-pulse" />
+              Xu Hướng Hoàn Thành Công Việc & Đối Chiếu Ngân Sách Giải Ngân
+            </h2>
+            <p className="text-xs text-slate-500 mt-1">
+              Phân tích lũy kế tiến trình hoàn thành công việc (%) song hành cùng dòng tiền ngân sách thực tế đã chi trả (Triệu VNĐ) qua từng mốc thời gian.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-4 text-xs font-semibold">
+            <span className="flex items-center gap-1.5 text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              Tỉ lệ hoàn thành (%)
+            </span>
+            <span className="flex items-center gap-1.5 text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">
+              <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+              Ngân sách đã chi (Triệu VNĐ)
+            </span>
+          </div>
+        </div>
+
+        <div className="h-80 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={trendData} margin={{ top: 15, right: 20, left: -10, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.6} />
+              <XAxis 
+                dataKey="date" 
+                tick={{ fill: '#64748B', fontSize: 11, fontWeight: 650 }}
+                axisLine={false} 
+                tickLine={false} 
+              />
+              <YAxis 
+                domain={[0, 'auto']} 
+                tick={{ fill: '#64748B', fontSize: 11 }}
+                axisLine={false} 
+                tickLine={false} 
+              />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: '#0F172A', 
+                  borderRadius: '12px', 
+                  color: '#fff', 
+                  border: 'none', 
+                  padding: '12px' 
+                }}
+                itemStyle={{ fontSize: '12px', fontWeight: 600 }}
+                labelStyle={{ fontWeight: 800, fontSize: '11px', color: '#94A3B8', marginBottom: '6px' }}
+                formatter={(value: any, name: any, props: any) => {
+                  if (name === 'Tỷ lệ hoàn thành (%)') {
+                    const completed = props.payload['Công việc hoàn thành'];
+                    const total = props.payload['Tổng công việc'];
+                    return [`${value}% (${completed}/${total} việc)`, name];
+                  }
+                  return [`${value} Triệu VNĐ`, name];
+                }}
+              />
+              <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', fontWeight: 500 }} />
+              <Line 
+                type="monotone" 
+                dataKey="Tỷ lệ hoàn thành (%)" 
+                stroke="#10B981" 
+                strokeWidth={3} 
+                activeDot={{ r: 6 }} 
+                dot={{ r: 4, strokeWidth: 2, fill: '#fff' }} 
+              />
+              <Line 
+                type="monotone" 
+                dataKey="Ngân sách giải ngân (Triệu VNĐ)" 
+                stroke="#6366F1" 
+                strokeWidth={3} 
+                activeDot={{ r: 6 }} 
+                dot={{ r: 4, strokeWidth: 2, fill: '#fff' }} 
+              />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
