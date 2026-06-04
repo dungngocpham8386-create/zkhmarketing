@@ -237,7 +237,7 @@ export default function App() {
     if (cachedMembers) {
       try {
         const parsed: Member[] = JSON.parse(cachedMembers);
-        if (parsed.length < INITIAL_MEMBERS.length || parsed.some(m => m.email === 'hai.nguyen@marketing.co')) {
+        if (parsed.some(m => m.email === 'hai.nguyen@marketing.co')) {
           shouldResetAllData = true;
         }
       } catch (e) {
