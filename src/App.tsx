@@ -850,31 +850,6 @@ export default function App() {
             </button>
           </form>
 
-          {/* Fast Switch User testing shortcuts */}
-          <div className="pt-4 border-t border-slate-800/80 space-y-3">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Chọn tài khoản đăng nhập nhanh (Để thử nghiệm)</span>
-            <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
-              {members.map(m => (
-                <button
-                  key={m.id}
-                  onClick={() => {
-                    setLoginEmail(m.email);
-                    setLoginPassword(m.password || '123');
-                    setLoginError(null);
-                  }}
-                  className="flex items-center gap-2 p-2 rounded-xl bg-slate-900/40 border border-slate-800/50 hover:bg-slate-900 hover:border-slate-700 text-left transition"
-                  type="button"
-                >
-                  <img src={m.avatar} alt={m.name} className="w-8 h-8 rounded-full object-cover shrink-0 border border-slate-800" referrerPolicy="no-referrer" />
-                  <div className="overflow-hidden">
-                    <span className="text-[11px] font-bold text-slate-200 block truncate">{m.name}</span>
-                    <span className="text-[9px] text-slate-400 block truncate font-mono uppercase font-bold tracking-tight text-indigo-400">{m.systemRole} (Mật khẩu ẩn)</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
         </div>
       </div>
     );
