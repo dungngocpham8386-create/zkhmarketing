@@ -19,7 +19,6 @@ interface PermissionsManagerProps {
   currentUser: Member;
   onUpdateMemberRole: (memberId: string, systemRole: SystemRole) => void;
   onUpdatePermissions: (role: SystemRole, updatedPerms: Partial<RolePermissions>) => void;
-  onImpersonateUser: (member: Member) => void;
 }
 
 export default function PermissionsManager({
@@ -27,8 +26,7 @@ export default function PermissionsManager({
   permissions,
   currentUser,
   onUpdateMemberRole,
-  onUpdatePermissions,
-  onImpersonateUser
+  onUpdatePermissions
 }: PermissionsManagerProps) {
 
   const canManage = currentUser.systemRole === 'Admin';
@@ -76,7 +74,7 @@ export default function PermissionsManager({
             </p>
           </div>
           <div className="bg-white/5 backdrop-blur-md p-4 rounded-xl border border-white/10 text-xs space-y-2 block self-start">
-            <span className="text-indigo-300 font-mono block text-[10px] uppercase font-bold tracking-wider">Tài khoản giả lập hiện tại</span>
+            <span className="text-indigo-300 font-mono block text-[10px] uppercase font-bold tracking-wider">Tài khoản đang đăng nhập</span>
             <div className="flex items-center gap-2.5">
               <img src={currentUser.avatar} alt={currentUser.name} className="w-8 h-8 rounded-full object-cover border border-white/20" referrerPolicy="no-referrer" />
               <div>
@@ -85,57 +83,6 @@ export default function PermissionsManager({
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Impersonation Console */}
-      <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
-            <Users className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-slate-900">Tính năng Giả lập Người dùng (Impersonation Mode)</h2>
-            <p className="text-xs text-slate-500">Mô phỏng trải nghiệm người dùng bằng cách chọn một nhân viên dưới đây. Toàn bộ tính năng hiển thị, hóa đơn, nút bấm của hệ thống sẽ lập tức phản ánh chính xác phân quyền của người đó.</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 pt-3">
-          {members.map(m => {
-            const isCurrent = m.id === currentUser.id;
-            return (
-              <button
-                key={m.id}
-                onClick={() => onImpersonateUser(m)}
-                className={`group flex flex-col items-center p-3 rounded-xl border transition-all text-center relative ${
-                  isCurrent 
-                    ? 'border-indigo-600 bg-indigo-600 text-white shadow-md' 
-                    : 'border-slate-100 bg-slate-50 hover:bg-white hover:border-slate-300 hover:shadow-xs text-slate-700'
-                }`}
-              >
-                {isCurrent && (
-                  <span className="absolute -top-1.5 -right-1 flex h-3.5 w-3.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500"></span>
-                  </span>
-                )}
-                <img 
-                  src={m.avatar} 
-                  alt={m.name} 
-                  className={`w-10 h-10 rounded-full object-cover border mb-2 group-hover:scale-105 transition ${
-                    isCurrent ? 'border-indigo-300' : 'border-slate-205'
-                  }`}
-                  referrerPolicy="no-referrer"
-                />
-                <span className="text-xs font-bold block truncate w-full">{m.name.split(' ').slice(-2).join(' ')}</span>
-                <span className={`text-[10px] font-mono mt-0.5 block ${
-                  isCurrent ? 'text-indigo-200' : 'text-slate-500'
-                }`}>
-                  {m.systemRole}
-                </span>
-              </button>
-            );
-          })}
         </div>
       </div>
 

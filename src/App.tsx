@@ -787,13 +787,6 @@ export default function App() {
     triggerNotification(`Đã cập nhật chi tiết bảng quyền nhóm: ${role}`);
   };
 
-  const handleImpersonateUser = (member: Member) => {
-    setCurrentUser(member);
-    localStorage.setItem('mkt_current_user', JSON.stringify(member));
-    triggerNotification(`Đang nhập vai dùng thử: ${member.name} (${member.systemRole})`);
-    setIsNotifDropdownOpen(false); // Close dropdown on user switch
-  };
-
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const found = members.find(m => m.email.toLowerCase().trim() === loginEmail.toLowerCase().trim());
@@ -1321,7 +1314,6 @@ export default function App() {
                 permissions={rolePermissions}
                 onUpdateMemberRole={handleUpdateMemberRole}
                 onUpdatePermissions={handleUpdatePermissions}
-                onImpersonateUser={handleImpersonateUser}
               />
             )}
 

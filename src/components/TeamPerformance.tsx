@@ -1116,8 +1116,8 @@ export default function TeamPerformance({
                 <Users className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900">Bổ nhiệm Thành viên mới</h3>
-                <p className="text-xs text-slate-500">Thêm nhân viên mới vào phòng ban Marketing</p>
+                <h3 className="text-base font-bold text-slate-900">Tạo Tài Khoản & Bổ Nhiệm Thành Viên</h3>
+                <p className="text-xs text-slate-500">Admin cấp tài khoản đăng nhập và phân chia quyền hạn phòng ban.</p>
               </div>
             </div>
 
@@ -1474,8 +1474,8 @@ export default function TeamPerformance({
                 <Edit2 className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900">Chỉnh sửa thông tin</h3>
-                <p className="text-xs text-slate-500 font-medium">Cập nhật thông tin chi tiết của nhân sự</p>
+                <h3 className="text-base font-bold text-slate-900">Quản lý & Cập nhật Tài khoản</h3>
+                <p className="text-xs text-slate-500 font-medium">Bảo trì thông tin nhân sự và cập nhật mật khẩu đăng nhập.</p>
               </div>
             </div>
 
