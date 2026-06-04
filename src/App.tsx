@@ -883,11 +883,11 @@ export default function App() {
             )}
 
             <div className="space-y-1.5">
-              <label className="text-slate-350 font-bold text-xs uppercase tracking-wider block">Địa chỉ Email</label>
+              <label className="text-slate-350 font-bold text-xs uppercase tracking-wider block">Email</label>
               <input 
                 type="email" 
                 required
-                placeholder="Ví dụ: dungngocpham8386@gmail.com"
+                placeholder="Nhập Email"
                 value={loginEmail} 
                 onChange={(e) => setLoginEmail(e.target.value)}
                 className="w-full text-xs p-3.5 rounded-xl bg-slate-900 border border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600 text-white placeholder-slate-500 transition-all font-mono"
@@ -899,7 +899,7 @@ export default function App() {
               <input 
                 type="password" 
                 required
-                placeholder="Mật khẩu (Mặc định: 123)"
+                placeholder="Nhập mật khẩu"
                 value={loginPassword} 
                 onChange={(e) => setLoginPassword(e.target.value)}
                 className="w-full text-xs p-3.5 rounded-xl bg-slate-900 border border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600 text-white placeholder-slate-500 transition-all font-mono"
