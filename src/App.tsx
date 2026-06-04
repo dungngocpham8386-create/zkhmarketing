@@ -137,24 +137,13 @@ export default function App() {
               return { ...m, email: 'dungngocpham8386@gmail.com', password: m.password || '123' };
             }
             return m.password ? m : { ...m, password: '123' };
+          }).filter((m: any) => m.email && m.email.toLowerCase().trim().endsWith('@gmail.com'));
+          // Auto-merge all predefined accounts from INITIAL_MEMBERS if they are missing from list
+          INITIAL_MEMBERS.forEach((initMem) => {
+            if (!list.some((m: any) => m.email.toLowerCase().trim() === initMem.email.toLowerCase().trim())) {
+              list.push(initMem);
+            }
           });
-          if (!list.some((m: any) => m.email.toLowerCase().trim() === 'mphuongnt1402@gmail.com')) {
-            const mphuong = INITIAL_MEMBERS.find(m => m.email === 'mphuongnt1402@gmail.com') || {
-              id: 'm7',
-              name: 'Mai Phương',
-              role: 'Phó phòng Marketing (Admin)',
-              systemRole: 'Admin',
-              email: 'mphuongnt1402@gmail.com',
-              password: '123',
-              division: 'Digital Ads',
-              avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-              efficiencyScore: 98,
-              phone: '0981402140',
-              birthDate: '1996-02-14',
-              joinedDate: '2025-01-10'
-            };
-            list.push(mphuong);
-          }
           return list;
         }
       } catch (e) {
@@ -195,24 +184,13 @@ export default function App() {
               return { ...m, email: 'dungngocpham8386@gmail.com', password: m.password || '123' };
             }
             return m.password ? m : { ...m, password: '123' };
+          }).filter((m: any) => m.email && m.email.toLowerCase().trim().endsWith('@gmail.com'));
+          // Auto-merge all predefined accounts from INITIAL_MEMBERS if they are missing from list
+          INITIAL_MEMBERS.forEach((initMem) => {
+            if (!useMembers.some((m: any) => m.email.toLowerCase().trim() === initMem.email.toLowerCase().trim())) {
+              useMembers.push(initMem);
+            }
           });
-          if (!useMembers.some((m: any) => m.email.toLowerCase().trim() === 'mphuongnt1402@gmail.com')) {
-            const mphuong = INITIAL_MEMBERS.find(m => m.email === 'mphuongnt1402@gmail.com') || {
-              id: 'm7',
-              name: 'Mai Phương',
-              role: 'Phó phòng Marketing (Admin)',
-              systemRole: 'Admin',
-              email: 'mphuongnt1402@gmail.com',
-              password: '123',
-              division: 'Digital Ads',
-              avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-              efficiencyScore: 98,
-              phone: '0981402140',
-              birthDate: '1996-02-14',
-              joinedDate: '2025-01-10'
-            };
-            useMembers.push(mphuong);
-          }
         }
       } catch (e) {}
     }
@@ -319,24 +297,13 @@ export default function App() {
               return { ...m, email: 'dungngocpham8386@gmail.com', password: m.password || '123' };
             }
             return m.password ? m : { ...m, password: '123' };
+          }).filter(m => m.email && m.email.toLowerCase().trim().endsWith('@gmail.com'));
+          // Auto-merge all predefined accounts from INITIAL_MEMBERS if they are missing from list
+          INITIAL_MEMBERS.forEach((initMem) => {
+            if (!migrated.some(m => m.email.toLowerCase().trim() === initMem.email.toLowerCase().trim())) {
+              migrated.push(initMem);
+            }
           });
-          if (!migrated.some(m => m.email.toLowerCase().trim() === 'mphuongnt1402@gmail.com')) {
-            const mphuong = INITIAL_MEMBERS.find(m => m.email === 'mphuongnt1402@gmail.com') || {
-              id: 'm7',
-              name: 'Mai Phương',
-              role: 'Phó phòng Marketing (Admin)',
-              systemRole: 'Admin',
-              email: 'mphuongnt1402@gmail.com',
-              password: '123',
-              division: 'Digital Ads',
-              avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-              efficiencyScore: 98,
-              phone: '0981402140',
-              birthDate: '1996-02-14',
-              joinedDate: '2025-01-10'
-            };
-            migrated.push(mphuong);
-          }
           setMembers(migrated);
           finalMembers = migrated;
           loadedFromCache = true;
@@ -806,38 +773,34 @@ export default function App() {
   };
 
   const handleSyncAndClearMockUsers = () => {
-    // 1. Reconstruct admin to have correct spelling 'dungngocpham8386@gmail.com' and roles
-    const adminUser = members.find(m => m.id === 'm1') || INITIAL_MEMBERS[0];
-    const syncedAdmin: Member = {
-      ...adminUser,
-      id: 'm1',
-      name: 'Phạm Ngọc Dũng',
-      email: 'dungngocpham8386@gmail.com', // Correct exact suffix
-      password: adminUser.password || '123',
-      systemRole: 'Admin',
-      role: 'Trưởng phòng Marketing',
-      division: 'Digital Ads'
-    };
+    // Keep only members that have a gmail.com email
+    const filteredMembers = members.filter(m => m.email && m.email.toLowerCase().trim().endsWith('@gmail.com'));
+    
+    // Ensure all INITIAL_MEMBERS (genuine Gmail accounts) are in the list
+    INITIAL_MEMBERS.forEach(initMem => {
+      if (!filteredMembers.some(m => m.email.toLowerCase().trim() === initMem.email.toLowerCase().trim())) {
+        filteredMembers.push(initMem);
+      }
+    });
 
-    // 2. Set members list to ONLY contain the synced real administrative user
-    const newMembersList = [syncedAdmin];
-    saveMembers(newMembersList);
+    saveMembers(filteredMembers);
 
-    // 3. Sync currentUser immediately
-    setCurrentUser(syncedAdmin);
-    localStorage.setItem('mkt_current_user', JSON.stringify(syncedAdmin));
+    // Sync currentUser immediately to a valid Gmail user
+    const adminUser = filteredMembers.find(m => m.id === 'm1' || m.systemRole === 'Admin') || filteredMembers[0];
+    setCurrentUser(adminUser);
+    localStorage.setItem('mkt_current_user', JSON.stringify(adminUser));
 
-    // 4. Update task assignee ids for deleted mock users to empty (unassigned)
+    // Update task assignee ids if the assignee was deleted (not in filtered list)
+    const validIds = new Set(filteredMembers.map(m => m.id));
     const updatedTasks = tasks.map(t => {
-      if (t.assigneeId && t.assigneeId !== 'm1') {
+      if (t.assigneeId && !validIds.has(t.assigneeId)) {
         return { ...t, assigneeId: '' };
       }
       return t;
     });
     saveTasks(updatedTasks);
 
-    // 5. Save and synchronize
-    triggerNotification('🧹 Đã dọn dẹp toàn bộ tài khoản giả lập & đồng bộ Admin @gmail.com thành công!');
+    triggerNotification('🧹 Đã đồng bộ danh sách & dọn dẹp tất cả tài khoản không phải Gmail thành công!');
   };
 
   // --- Invoice Operations ---
