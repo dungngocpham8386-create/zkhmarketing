@@ -291,6 +291,30 @@ export default function App() {
     }
   }, []);
 
+  // Tự động đồng bộ hóa thông tin tài khoản đăng nhập (currentUser) bất cứ khi nào danh sách thành viên (members) có thay đổi thông tin
+  useEffect(() => {
+    if (members && members.length > 0 && currentUser) {
+      const freshUser = members.find(m => m.id === currentUser.id);
+      if (freshUser) {
+        if (
+          freshUser.name !== currentUser.name ||
+          freshUser.role !== currentUser.role ||
+          freshUser.email !== currentUser.email ||
+          freshUser.password !== currentUser.password ||
+          freshUser.division !== currentUser.division ||
+          freshUser.systemRole !== currentUser.systemRole ||
+          freshUser.avatar !== currentUser.avatar ||
+          freshUser.efficiencyScore !== currentUser.efficiencyScore ||
+          freshUser.phone !== currentUser.phone ||
+          freshUser.birthDate !== currentUser.birthDate
+        ) {
+          setCurrentUser(freshUser);
+          localStorage.setItem('mkt_current_user', JSON.stringify(freshUser));
+        }
+      }
+    }
+  }, [members, currentUser]);
+
   // Tự động kiểm tra hạn chót (Deadline Check Engine) và đồng bộ hóa trạng thái khi chỉnh sửa thủ công
   useEffect(() => {
     if (tasks.length === 0 || members.length === 0) return;

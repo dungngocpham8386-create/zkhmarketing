@@ -195,6 +195,8 @@ export default function TeamPerformance({
   const [editMemberBirthDate, setEditMemberBirthDate] = useState('');
   const [editMemberAvatar, setEditMemberAvatar] = useState('');
 
+  const canEditRoleAndEfficiency = permissions.roles_manage && editingMemberId !== currentUser.id;
+
   const openEditModal = (member: Member) => {
     setEditingMemberId(member.id);
     setEditMemberName(member.name);
@@ -642,17 +644,15 @@ export default function TeamPerformance({
                       </div>
                     </th>
 
-                    {permissions.team_add_member && (
-                      <th className="p-4 pr-6 text-center select-none w-20">
-                        <span>Thao tác</span>
-                      </th>
-                    )}
+                    <th className="p-4 pr-6 text-center select-none w-20">
+                      <span>Thao tác</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs text-slate-700 col-span-1">
                   {processedStats.length === 0 ? (
                     <tr>
-                      <td colSpan={permissions.team_add_member ? 8 : 7} className="text-center p-16 text-slate-400 italic">
+                      <td colSpan={8} className="text-center p-16 text-slate-400 italic">
                         Không tìm thấy thành viên nào phù hợp với bộ lọc tìm kiếm
                       </td>
                     </tr>
@@ -669,11 +669,16 @@ export default function TeamPerformance({
                       }
 
                       const isSecuredAdmin = emp.systemRole === 'Admin' && currentUser.systemRole !== 'Admin';
+                      const isCurrentUser = emp.id === currentUser.id;
 
                       return (
                         <tr 
                           key={emp.id} 
-                          className="hover:bg-indigo-50/10 transition duration-150 group"
+                          className={`transition duration-150 group ${
+                            isCurrentUser 
+                              ? 'bg-amber-50/20 hover:bg-amber-50/40 border-l-4 border-amber-500 shadow-3xs' 
+                              : 'hover:bg-indigo-50/10'
+                          }`}
                         >
                           {/* 1. Thành viên */}
                           <td className="p-4 pl-6">
@@ -685,7 +690,14 @@ export default function TeamPerformance({
                                 referrerPolicy="no-referrer"
                               />
                               <div>
-                                <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 tracking-tight leading-snug">{emp.name}</h4>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 tracking-tight leading-snug">{emp.name}</h4>
+                                  {isCurrentUser && (
+                                    <span className="text-[9px] bg-amber-100 text-amber-800 font-extrabold px-1.5 py-0.2 rounded-md border border-amber-200 uppercase tracking-wider animate-pulse shrink-0">
+                                      Bạn
+                                    </span>
+                                  )}
+                                </div>
                                 <span className="text-[10px] text-slate-400 font-medium">Tham gia: {emp.joinedDate}</span>
                               </div>
                             </div>
@@ -799,46 +811,54 @@ export default function TeamPerformance({
                             </div>
                           </td>
 
-                          {permissions.team_add_member && (
                             <td className="p-4 pr-6 text-center">
                               <div className="flex items-center justify-center gap-1">
-                                <button
-                                  disabled={isSecuredAdmin}
-                                  onClick={() => openEditModal(emp)}
-                                  className={`p-2 rounded-xl transition ${
-                                    isSecuredAdmin
-                                      ? 'text-slate-300 cursor-not-allowed opacity-50'
-                                      : 'text-indigo-600 hover:text-indigo-850 hover:bg-slate-100 cursor-pointer'
-                                  }`}
-                                  title={isSecuredAdmin ? 'Chỉ Admin mới có quyền sửa thông tin Admin' : 'Sửa thông tin'}
-                                  id={`edit_member_btn_${emp.id}`}
-                                >
-                                  <Edit2 className="w-4 h-4" />
-                                </button>
-                                <button
-                                  disabled={emp.id === 'm1' || emp.id === currentUser.id || isSecuredAdmin}
-                                  onClick={() => setDeleteConfirmId(emp.id)}
-                                  className={`p-2 rounded-xl transition ${
-                                    emp.id === 'm1' || emp.id === currentUser.id || isSecuredAdmin
-                                      ? 'text-slate-300 cursor-not-allowed opacity-50'
-                                      : 'text-rose-600 hover:text-rose-800 hover:bg-rose-50 cursor-pointer'
-                                  }`}
-                                  title={
-                                    emp.id === 'm1' 
-                                      ? 'Không thể xóa Admin hệ thống' 
-                                      : emp.id === currentUser.id 
-                                        ? 'Không thể tự xóa chính mình' 
-                                        : isSecuredAdmin 
-                                          ? 'Chỉ Admin mới có quyền xóa Admin' 
-                                          : 'Xóa thành viên'
-                                  }
-                                  id={`delete_member_btn_${emp.id}`}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
+                                {(permissions.team_add_member || emp.id === currentUser.id) ? (
+                                  <>
+                                    <button
+                                      disabled={isSecuredAdmin}
+                                      onClick={() => openEditModal(emp)}
+                                      className={`p-2 rounded-xl transition ${
+                                        isSecuredAdmin
+                                          ? 'text-slate-300 cursor-not-allowed opacity-50'
+                                          : 'text-indigo-600 hover:text-indigo-850 hover:bg-slate-100 cursor-pointer'
+                                      }`}
+                                      title={isSecuredAdmin ? 'Chỉ Admin mới có quyền sửa thông tin Admin' : 'Sửa thông tin'}
+                                      id={`edit_member_btn_${emp.id}`}
+                                    >
+                                      <Edit2 className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      disabled={emp.id === 'm1' || emp.id === currentUser.id || isSecuredAdmin || !permissions.team_add_member}
+                                      onClick={() => setDeleteConfirmId(emp.id)}
+                                      className={`p-2 rounded-xl transition ${
+                                        emp.id === 'm1' || emp.id === currentUser.id || isSecuredAdmin || !permissions.team_add_member
+                                          ? 'text-slate-300 cursor-not-allowed opacity-50'
+                                          : 'text-rose-600 hover:text-rose-800 hover:bg-rose-50 cursor-pointer'
+                                      }`}
+                                      title={
+                                        emp.id === 'm1' 
+                                          ? 'Không thể xóa Admin hệ thống' 
+                                          : emp.id === currentUser.id 
+                                            ? 'Không thể tự xóa chính mình' 
+                                            : isSecuredAdmin 
+                                              ? 'Chỉ Admin mới có quyền xóa Admin' 
+                                              : !permissions.team_add_member
+                                                ? 'Chỉ quản trị viên mới có quyền xóa nhân sự'
+                                                : 'Xóa thành viên'
+                                      }
+                                      id={`delete_member_btn_${emp.id}`}
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <span className="text-slate-300 p-2" title="Chỉ admin hoặc bản thân mới chỉnh sửa được">
+                                    <Lock className="w-4 h-4 opacity-50" />
+                                  </span>
+                                )}
                               </div>
                             </td>
-                          )}
                         </tr>
                       );
                     })
@@ -868,10 +888,16 @@ export default function TeamPerformance({
 
                     const isSecuredAdmin = emp.systemRole === 'Admin' && currentUser.systemRole !== 'Admin';
 
+                    const isCurrentUser = emp.id === currentUser.id;
+
                     return (
                       <div 
                         key={emp.id} 
-                        className="bg-slate-50/50 rounded-2xl border border-slate-100 p-5 hover:border-indigo-150 hover:shadow-md transition duration-200 flex flex-col justify-between group"
+                        className={`rounded-2xl border p-5 transition duration-200 flex flex-col justify-between group ${
+                          isCurrentUser 
+                            ? 'bg-amber-50/20 border-amber-300 ring-1 ring-amber-300/40 shadow-xs' 
+                            : 'bg-slate-50/50 border-slate-100 hover:border-indigo-150 hover:shadow-md'
+                        }`}
                       >
                   <div className="space-y-4">
                     {/* Upper profile section */}
@@ -898,7 +924,16 @@ export default function TeamPerformance({
                               {emp.systemRole}
                             </span>
                           </div>
-                          <h3 className="text-sm font-bold text-slate-900 tracking-tight">{emp.name}</h3>
+                          
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h3 className="text-sm font-bold text-slate-900 tracking-tight">{emp.name}</h3>
+                            {isCurrentUser && (
+                              <span className="text-[10px] bg-amber-100 text-amber-800 font-extrabold px-1.5 py-0.2 rounded-md border border-amber-200 uppercase tracking-wider animate-pulse shrink-0">
+                                Bạn
+                              </span>
+                            )}
+                          </div>
+                          
                           <p className="text-xs text-slate-500 font-medium flex items-center gap-1">
                             <Briefcase className="w-3.5 h-3.5 text-slate-400" />
                             {emp.role}
@@ -906,44 +941,52 @@ export default function TeamPerformance({
                         </div>
                       </div>
 
-                      {permissions.team_add_member && (
-                        <div className="flex gap-1 self-start">
-                          <button
-                            disabled={isSecuredAdmin}
-                            onClick={() => openEditModal(emp)}
-                            className={`p-1.5 rounded-lg border shadow-xs transition ${
-                              isSecuredAdmin
-                                ? 'text-slate-200 cursor-not-allowed opacity-40 border-transparent bg-transparent shadow-none'
-                                : 'text-slate-400 hover:text-indigo-600 hover:bg-white border-transparent hover:border-slate-100 cursor-pointer'
-                            }`}
-                            title={isSecuredAdmin ? 'Chỉ Admin mới có quyền sửa thông tin Admin' : 'Sửa thông tin'}
-                            id={`grid_edit_member_btn_${emp.id}`}
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            disabled={emp.id === 'm1' || emp.id === currentUser.id || isSecuredAdmin}
-                            onClick={() => setDeleteConfirmId(emp.id)}
-                            className={`p-1.5 rounded-lg border shadow-xs transition ${
-                              emp.id === 'm1' || emp.id === currentUser.id || isSecuredAdmin
-                                ? 'text-slate-200 cursor-not-allowed opacity-40 border-transparent shadow-none'
-                                : 'text-slate-400 hover:text-rose-600 hover:bg-white hover:border-rose-100 cursor-pointer'
-                            }`}
-                            title={
-                              emp.id === 'm1' 
-                                ? 'Không thể xóa Admin hệ thống' 
-                                : emp.id === currentUser.id 
-                                  ? 'Không thể tự xóa chính mình' 
-                                  : isSecuredAdmin 
-                                    ? 'Chỉ Admin mới có quyền xóa Admin' 
-                                    : 'Xóa thành viên'
-                            }
-                            id={`grid_delete_member_btn_${emp.id}`}
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      )}
+                      <div className="flex gap-1 self-start">
+                        {(permissions.team_add_member || emp.id === currentUser.id) ? (
+                          <>
+                            <button
+                              disabled={isSecuredAdmin}
+                              onClick={() => openEditModal(emp)}
+                              className={`p-1.5 rounded-lg border shadow-xs transition-all ${
+                                isSecuredAdmin
+                                  ? 'text-slate-200 cursor-not-allowed opacity-40 border-transparent bg-transparent shadow-none'
+                                  : 'text-slate-400 hover:text-indigo-600 hover:bg-white border-slate-100 hover:border-slate-200 cursor-pointer'
+                              }`}
+                              title={isSecuredAdmin ? 'Chỉ Admin mới có quyền sửa thông tin Admin' : 'Sửa thông tin'}
+                              id={`grid_edit_member_btn_${emp.id}`}
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              disabled={emp.id === 'm1' || emp.id === currentUser.id || isSecuredAdmin || !permissions.team_add_member}
+                              onClick={() => setDeleteConfirmId(emp.id)}
+                              className={`p-1.5 rounded-lg border shadow-xs transition-all ${
+                                emp.id === 'm1' || emp.id === currentUser.id || isSecuredAdmin || !permissions.team_add_member
+                                  ? 'text-slate-200 cursor-not-allowed opacity-40 border-transparent bg-transparent shadow-none'
+                                  : 'text-slate-400 hover:text-rose-600 hover:bg-white border-slate-100 hover:border-rose-200 cursor-pointer'
+                              }`}
+                              title={
+                                emp.id === 'm1' 
+                                  ? 'Không thể xóa Admin hệ thống' 
+                                  : emp.id === currentUser.id 
+                                    ? 'Không thể tự xóa chính mình' 
+                                    : isSecuredAdmin 
+                                      ? 'Chỉ Admin mới có quyền xóa Admin' 
+                                      : !permissions.team_add_member
+                                        ? 'Chỉ quản trị viên mới có quyền xóa nhân sự'
+                                        : 'Xóa thành viên'
+                              }
+                              id={`grid_delete_member_btn_${emp.id}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        ) : (
+                          <span className="text-slate-300 p-1.5" title="Chỉ admin hoặc bản thân mới chỉnh sửa được">
+                            <Lock className="w-3.5 h-3.5 opacity-65" />
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-slate-500 font-medium">
@@ -1574,37 +1617,48 @@ export default function TeamPerformance({
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <div className="flex justify-between items-center text-slate-700 font-semibold">
-                  <label>Chỉ Số Năng Lực Cơ Bản (KPI target)</label>
-                  <span className="font-bold text-indigo-600">{editMemberEfficiency}%</span>
-                </div>
-                <input 
-                  type="range" 
-                  min="50" 
-                  max="100" 
-                  value={editMemberEfficiency} 
-                  onChange={(e) => setEditMemberEfficiency(Number(e.target.value))}
-                  className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                />
-                <div className="flex justify-between text-[10px] text-slate-400">
-                  <span>Khá (50%)</span>
-                  <span>Xuất sắc (100%)</span>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-slate-700 font-semibold block">Phân quyền hệ thống</label>
-                <select 
-                  value={editMemberSystemRole} 
-                  onChange={(e) => setEditMemberSystemRole(e.target.value as SystemRole)}
-                  className="w-full text-xs p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-600 text-slate-950"
-                >
-                  <option value="Member">Nhân viên thông thường (Member)</option>
-                  <option value="Manager">Quản lý duyệt chi (Manager)</option>
-                  <option value="Admin">Quản trị viên tối cao (Admin)</option>
-                </select>
-              </div>
+               <div className="space-y-1">
+                 <div className="flex justify-between items-center text-slate-700 font-semibold">
+                   <label>Chỉ Số Năng Lực Cơ Bản (KPI target)</label>
+                   <span className="font-bold text-indigo-600">{editMemberEfficiency}%</span>
+                 </div>
+                 <input 
+                   type="range" 
+                   min="50" 
+                   max="100" 
+                   disabled={!canEditRoleAndEfficiency}
+                   value={editMemberEfficiency} 
+                   onChange={(e) => setEditMemberEfficiency(Number(e.target.value))}
+                   className={`w-full h-1.5 bg-slate-200 rounded-lg appearance-none accent-indigo-600 ${
+                     !canEditRoleAndEfficiency ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+                   }`}
+                 />
+                 <div className="flex justify-between text-[10px] text-slate-400">
+                   <span>Khá (50%)</span>
+                   <span>Xuất sắc (100%)</span>
+                 </div>
+               </div>
+ 
+               <div className="space-y-1">
+                 <label className="text-slate-700 font-semibold block">Phân quyền hệ thống</label>
+                 <select 
+                   value={editMemberSystemRole} 
+                   disabled={!canEditRoleAndEfficiency}
+                   onChange={(e) => setEditMemberSystemRole(e.target.value as SystemRole)}
+                   className={`w-full text-xs p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-600 text-slate-950 ${
+                     !canEditRoleAndEfficiency ? 'cursor-not-allowed bg-slate-50 opacity-80' : ''
+                   }`}
+                 >
+                   <option value="Member">Nhân viên thông thường (Member)</option>
+                   <option value="Manager">Quản lý duyệt chi (Manager)</option>
+                   <option value="Admin">Quản trị viên tối cao (Admin)</option>
+                 </select>
+                 {!canEditRoleAndEfficiency && (
+                   <p className="text-[10px] text-amber-600 font-semibold mt-1">
+                     🔒 Bạn không được phép tự thay đổi các thông số quản trị này của chính mình.
+                   </p>
+                 )}
+               </div>
 
               <div className="pt-4 flex flex-col gap-2">
                 <div className="flex gap-3">
