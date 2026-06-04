@@ -63,7 +63,7 @@ export default function InternalAdminLinks({
         division: 'Design',
         description: 'Chứa toàn bộ hình ảnh sản phẩm chất lượng cao, file nén (.zip) cho Key Visual chiến dịch Tết và banner quảng cáo.',
         updatedAt: '2026-05-28T10:30:00Z',
-        updatedBy: 'Phạm Minh Đức'
+        updatedBy: 'Phạm Ngọc Dũng'
       },
       {
         id: 'lnk-2',
@@ -73,7 +73,7 @@ export default function InternalAdminLinks({
         division: 'Design',
         description: 'Bản vẽ Layout Mobile App & Landing Page cho chương trình khuyến mại lớn mùa hạ 2026.',
         updatedAt: '2026-05-29T14:20:00Z',
-        updatedBy: 'Phạm Minh Đức'
+        updatedBy: 'Phạm Ngọc Dũng'
       },
       {
         id: 'lnk-3',
@@ -83,7 +83,7 @@ export default function InternalAdminLinks({
         division: 'Content',
         description: 'Tài liệu tối quan trọng của phòng Content, cập nhật timeline lên bài, phân nhóm Content Pillar chi tiết hàng ngày.',
         updatedAt: '2026-05-30T09:12:00Z',
-        updatedBy: 'Trần Thị Mai'
+        updatedBy: 'Phạm Ngọc Dũng'
       },
       {
         id: 'lnk-4',
@@ -93,7 +93,7 @@ export default function InternalAdminLinks({
         division: 'Digital Ads',
         description: 'Bảng sinh link UTM tự động cho các đường dẫn chạy Ads để đồng bộ kết quả chuyển đổi lên Google Analytics.',
         updatedAt: '2026-05-31T16:45:00Z',
-        updatedBy: 'Lê Hoàng Nam'
+        updatedBy: 'Phạm Ngọc Dũng'
       },
       {
         id: 'lnk-5',
@@ -103,7 +103,7 @@ export default function InternalAdminLinks({
         division: 'Event & PR',
         description: 'Kịch bản chi tiết cho MC, danh sách khách mời báo chí và hướng dẫn trả lời phỏng vấn truyền thông.',
         updatedAt: '2026-06-01T08:00:00Z',
-        updatedBy: 'Đặng Thùy Chi'
+        updatedBy: 'Phạm Ngọc Dũng'
       },
       {
         id: 'lnk-6',
@@ -113,7 +113,7 @@ export default function InternalAdminLinks({
         division: 'Design',
         description: 'Trang nén ảnh dung lượng cực tốt giúp tối ưu tốc độ tải trang cho Landing Page marketing.',
         updatedAt: '2026-05-25T11:05:00Z',
-        updatedBy: 'Hoàng Quốc Bảo'
+        updatedBy: 'Phạm Ngọc Dũng'
       }
     ];
 

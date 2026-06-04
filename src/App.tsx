@@ -152,6 +152,9 @@ export default function App() {
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
+        if (parsed && parsed.email !== 'dungngocpham8386@gmail.com') {
+          return INITIAL_MEMBERS[0];
+        }
         if (parsed && parsed.systemRole) return parsed;
       } catch (e) {
         console.error("Error parsing cached user:", e);
@@ -232,20 +235,40 @@ export default function App() {
     const cachedInvoices = localStorage.getItem('mkt_invoices');
 
     let finalMembers = INITIAL_MEMBERS;
+    let shouldResetAllData = false;
+
     if (cachedMembers) {
-      const parsed: Member[] = JSON.parse(cachedMembers);
+      try {
+        const parsed: Member[] = JSON.parse(cachedMembers);
+        if (parsed.some(m => m.email === 'hai.nguyen@marketing.co')) {
+          shouldResetAllData = true;
+        }
+      } catch (e) {
+        shouldResetAllData = true;
+      }
+    } else {
+      shouldResetAllData = true;
+    }
+
+    if (shouldResetAllData) {
+      setMembers(INITIAL_MEMBERS);
+      localStorage.setItem('mkt_members', JSON.stringify(INITIAL_MEMBERS));
+      localStorage.setItem('mkt_current_user', JSON.stringify(INITIAL_MEMBERS[0]));
+      setCurrentUser(INITIAL_MEMBERS[0]);
+      setIsAuthenticated(true);
+      localStorage.setItem('mkt_is_authenticated', 'true');
+      finalMembers = INITIAL_MEMBERS;
+    } else {
+      const parsed: Member[] = JSON.parse(cachedMembers!);
       const migrated = parsed.map(m => m.password ? m : { ...m, password: '123' });
       setMembers(migrated);
       localStorage.setItem('mkt_members', JSON.stringify(migrated));
       finalMembers = migrated;
-    } else {
-      setMembers(INITIAL_MEMBERS);
-      localStorage.setItem('mkt_members', JSON.stringify(INITIAL_MEMBERS));
     }
 
     // Đồng bộ hóa trạng thái tài khoản đăng nhập (currentUser) để luôn khớp với danh sách thành viên sau khi chỉnh sửa
     const savedUserStr = localStorage.getItem('mkt_current_user');
-    if (savedUserStr) {
+    if (savedUserStr && !shouldResetAllData) {
       try {
         const savedUserSnapshot = JSON.parse(savedUserStr) as Member;
         const freshUser = finalMembers.find(m => m.id === savedUserSnapshot.id);
@@ -258,9 +281,7 @@ export default function App() {
       }
     }
 
-    if (cachedTasks) {
-      setTasks(JSON.parse(cachedTasks));
-    } else {
+    if (shouldResetAllData || !cachedTasks) {
       // For demonstration, let's set t3 deadline to tomorrow (within 24 hours of today)
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
@@ -273,6 +294,8 @@ export default function App() {
       });
       setTasks(modifiedTasks);
       localStorage.setItem('mkt_tasks', JSON.stringify(modifiedTasks));
+    } else {
+      setTasks(JSON.parse(cachedTasks));
     }
 
     if (cachedInvoices) {
