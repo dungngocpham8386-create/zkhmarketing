@@ -152,9 +152,6 @@ export default function App() {
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
-        if (parsed && parsed.email !== 'dungngocpham8386@gmail.com') {
-          return INITIAL_MEMBERS[0];
-        }
         if (parsed && parsed.systemRole) return parsed;
       } catch (e) {
         console.error("Error parsing cached user:", e);
@@ -240,7 +237,7 @@ export default function App() {
     if (cachedMembers) {
       try {
         const parsed: Member[] = JSON.parse(cachedMembers);
-        if (parsed.some(m => m.email === 'hai.nguyen@marketing.co')) {
+        if (parsed.length < INITIAL_MEMBERS.length || parsed.some(m => m.email === 'hai.nguyen@marketing.co')) {
           shouldResetAllData = true;
         }
       } catch (e) {
