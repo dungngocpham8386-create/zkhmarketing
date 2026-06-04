@@ -136,8 +136,8 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     const cached = localStorage.getItem('mkt_is_authenticated');
     if (cached === null) {
-      localStorage.setItem('mkt_is_authenticated', 'true');
-      return true;
+      localStorage.setItem('mkt_is_authenticated', 'false');
+      return false;
     }
     return cached === 'true';
   });
@@ -255,8 +255,8 @@ export default function App() {
       localStorage.setItem('mkt_members', JSON.stringify(INITIAL_MEMBERS));
       localStorage.setItem('mkt_current_user', JSON.stringify(INITIAL_MEMBERS[0]));
       setCurrentUser(INITIAL_MEMBERS[0]);
-      setIsAuthenticated(true);
-      localStorage.setItem('mkt_is_authenticated', 'true');
+      setIsAuthenticated(false);
+      localStorage.setItem('mkt_is_authenticated', 'false');
       finalMembers = INITIAL_MEMBERS;
     } else {
       const parsed: Member[] = JSON.parse(cachedMembers!);
@@ -887,7 +887,7 @@ export default function App() {
               <input 
                 type="email" 
                 required
-                placeholder="Ví dụ: hai.nguyen@marketing.co"
+                placeholder="Ví dụ: dungngocpham8386@gmail.com"
                 value={loginEmail} 
                 onChange={(e) => setLoginEmail(e.target.value)}
                 className="w-full text-xs p-3.5 rounded-xl bg-slate-900 border border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600 text-white placeholder-slate-500 transition-all font-mono"
