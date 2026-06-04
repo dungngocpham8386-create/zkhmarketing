@@ -606,8 +606,24 @@ export default function App() {
   };
 
   const handleUpdateMember = (id: string, updatedFields: Partial<Member>) => {
+    const oldMember = members.find(m => m.id === id);
     const updated = members.map(m => m.id === id ? { ...m, ...updatedFields } : m);
     saveMembers(updated);
+
+    // Synchronize tasks assigned to this member if division is changed
+    let taskSyncCount = 0;
+    if (updatedFields.division && oldMember && oldMember.division !== updatedFields.division) {
+      const updatedTasks = tasks.map(t => {
+        if (t.assigneeId === id) {
+          taskSyncCount++;
+          return { ...t, division: updatedFields.division! };
+        }
+        return t;
+      });
+      if (taskSyncCount > 0) {
+        saveTasks(updatedTasks);
+      }
+    }
 
     // If edited user is currently active currentUser, sync its data immediately
     if (currentUser && currentUser.id === id) {
@@ -615,7 +631,13 @@ export default function App() {
       setCurrentUser(updatedUser);
       localStorage.setItem('mkt_current_user', JSON.stringify(updatedUser));
     }
-    triggerNotification(`Đã cập nhật thông tin thành viên thành công!`);
+
+    const memberName = oldMember ? oldMember.name : 'Thành viên';
+    if (taskSyncCount > 0) {
+      triggerNotification(`🔄 Đã cập nhật thành viên "${memberName}" & tự động chuyển ${taskSyncCount} công việc sang phân ban mới: ${updatedFields.division}!`);
+    } else {
+      triggerNotification(`✅ Đã cập nhật thông tin thành viên "${memberName}" thành công!`);
+    }
   };
 
   const handleDeleteMember = (id: string) => {
