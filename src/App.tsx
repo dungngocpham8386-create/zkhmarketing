@@ -158,6 +158,20 @@ export default function App() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [isNotifDropdownOpen, setIsNotifDropdownOpen] = useState(false);
 
+  const [dailyChecklists, setDailyChecklists] = useState<Record<string, { id: string; text: string; completed: boolean }[]>>(() => {
+    try {
+      const saved = localStorage.getItem('mkt_daily_checklists');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return {};
+  });
+
+  const saveDailyChecklists = (newChecklists: Record<string, { id: string; text: string; completed: boolean }[]>) => {
+    setDailyChecklists(newChecklists);
+    localStorage.setItem('mkt_daily_checklists', JSON.stringify(newChecklists));
+    syncWithServer({ dailyChecklists: newChecklists });
+  };
+
   // Synchronization with Express full-stack backend server
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -170,6 +184,7 @@ export default function App() {
     invoices?: Invoice[];
     divisions?: string[];
     notifications?: AppNotification[];
+    dailyChecklists?: Record<string, { id: string; text: string; completed: boolean }[]>;
   }) => {
     setIsSyncing(true);
     setSyncError(null);
@@ -217,6 +232,10 @@ export default function App() {
               setNotifications(data.notifications);
               localStorage.setItem('mkt_notifications', JSON.stringify(data.notifications));
             }
+            if (data.dailyChecklists) {
+              setDailyChecklists(data.dailyChecklists);
+              localStorage.setItem('mkt_daily_checklists', JSON.stringify(data.dailyChecklists));
+            }
             
             // Sync current user context
             const savedUserStr = localStorage.getItem('mkt_current_user');
@@ -240,13 +259,15 @@ export default function App() {
             const locInvoices = JSON.parse(localStorage.getItem('mkt_invoices') || '[]');
             const locDivisions = JSON.parse(localStorage.getItem('mkt_divisions') || '[]');
             const locNotifications = JSON.parse(localStorage.getItem('mkt_notifications') || '[]');
+            const locDailyChecklists = JSON.parse(localStorage.getItem('mkt_daily_checklists') || '{}');
             
             const payload = {
               members: locMembers.length > 0 ? locMembers : INITIAL_MEMBERS,
               tasks: locTasks.length > 0 ? locTasks : INITIAL_TASKS,
               invoices: locInvoices.length > 0 ? locInvoices : INITIAL_INVOICES,
               divisions: locDivisions.length > 0 ? locDivisions : ['Content', 'Design', 'Digital Ads', 'Event & PR'],
-              notifications: locNotifications.length > 0 ? locNotifications : []
+              notifications: locNotifications.length > 0 ? locNotifications : [],
+              dailyChecklists: locDailyChecklists
             };
             
             await fetch('/api/sync', {
@@ -492,7 +513,7 @@ export default function App() {
       if (!document.hidden && !isSyncing) {
         syncWithServer();
       }
-    }, 7000);
+    }, 2000);
     return () => clearInterval(interval);
   }, []);
 
@@ -1521,6 +1542,8 @@ export default function App() {
                 onUpdateMember={handleUpdateMember}
                 onDeleteMember={handleDeleteMember}
                 onSyncAndClearMockUsers={handleSyncAndClearMockUsers}
+                dailyChecklists={dailyChecklists}
+                onUpdateDailyChecklists={saveDailyChecklists}
               />
             )}
 

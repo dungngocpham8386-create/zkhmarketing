@@ -52,7 +52,7 @@ async function startServer() {
   // API endpoint: update state from client
   app.post("/api/sync", (req, res) => {
     try {
-      const { members, tasks, invoices, divisions, notifications } = req.body;
+      const { members, tasks, invoices, divisions, notifications, dailyChecklists } = req.body;
       const currentDB = readDB() || {};
 
       // Merge or update the fields
@@ -62,6 +62,7 @@ async function startServer() {
         invoices: invoices || currentDB.invoices || [],
         divisions: divisions || currentDB.divisions || ["Content", "Design", "Digital Ads", "Event & PR"],
         notifications: notifications || currentDB.notifications || [],
+        dailyChecklists: dailyChecklists || currentDB.dailyChecklists || {},
         lastUpdated: new Date().toISOString()
       };
 

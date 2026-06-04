@@ -81,6 +81,8 @@ interface TeamPerformanceProps {
   onUpdateMember?: (id: string, updatedFields: Partial<Member>) => void;
   onDeleteMember?: (id: string) => void;
   onSyncAndClearMockUsers?: () => void;
+  dailyChecklists?: Record<string, { id: string; text: string; completed: boolean }[]>;
+  onUpdateDailyChecklists?: (newChecklists: Record<string, { id: string; text: string; completed: boolean }[]>) => void;
 }
 
 export default function TeamPerformance({ 
@@ -96,7 +98,9 @@ export default function TeamPerformance({
   onClearAllDivisions,
   onUpdateMember,
   onDeleteMember,
-  onSyncAndClearMockUsers
+  onSyncAndClearMockUsers,
+  dailyChecklists: passedDailyChecklists,
+  onUpdateDailyChecklists
 }: TeamPerformanceProps) {
   const divisions = passedDivisions || ['Content', 'Design', 'Digital Ads', 'Event & PR'];
   const permissions = passedPermissions || {
@@ -118,43 +122,60 @@ export default function TeamPerformance({
   // Daily checklist states
   const [activeChecklistMemberId, setActiveChecklistMemberId] = useState<string | null>(null);
   const [newDailyTaskText, setNewDailyTaskText] = useState('');
-  const [dailyChecklists, setDailyChecklists] = useState<Record<string, { id: string; text: string; completed: boolean }[]>>(() => {
+
+  // Initial dummy data for best user experience on first load
+  const initialChecklists: Record<string, { id: string; text: string; completed: boolean }[]> = {
+    m1: [
+      { id: 'dc1_1', text: 'Duyệt kế hoạch ngân sách quảng cáo tuần tới', completed: true },
+      { id: 'dc1_2', text: 'Họp giao ban định kỳ với các Ban trưởng', completed: false },
+      { id: 'dc1_3', text: 'Duyệt báo cáo hiệu quả chiến dịch Facebook Ads', completed: false },
+    ],
+    m2: [
+      { id: 'dc2_1', text: 'Hoàn thành 3 bài viết PR nhãn hàng mới', completed: true },
+      { id: 'dc2_2', text: 'Lên outline content TikTok tuần 1 tháng 6', completed: true },
+      { id: 'dc2_3', text: 'Họp brainstorm ý tưởng mini-game Fanpage', completed: false },
+    ],
+    m3: [
+      { id: 'dc3_1', text: 'Thiết kế ấn phẩm banner chính cho website', completed: true },
+      { id: 'dc3_2', text: 'Chỉnh sửa layout Key Visual theo feedback', completed: false },
+      { id: 'dc3_3', text: 'Đóng gói tài nguyên thiết kế gửi dev', completed: false },
+    ],
+    m4: [
+      { id: 'dc4_1', text: 'Kiểm tra tỷ lệ chuyển đổi Google Ads', completed: true },
+      { id: 'dc4_2', text: 'Tối ưu bid chiến dịch quảng cáo TikTok', completed: false },
+    ],
+    m5: [
+      { id: 'dc5_1', text: 'Liên hệ 5 bên KOLs review sản phẩm', completed: true },
+      { id: 'dc5_2', text: 'Gửi thiệp mời họp báo ra mắt offline', completed: false },
+    ],
+    m6: [
+      { id: 'dc6_1', text: 'Lên kịch bản chi tiết cho 2 video TikTok', completed: true },
+      { id: 'dc6_2', text: 'Quay thô video review sản phẩm tại văn phòng', completed: false },
+    ],
+  };
+
+  const [internalChecklists, setInternalChecklists] = useState<Record<string, { id: string; text: string; completed: boolean }[]>>(() => {
     const saved = localStorage.getItem('mkt_daily_checklists');
     if (saved) return JSON.parse(saved);
-
-    // Initial dummy data for best user experience on first load
-    const initialChecklists: Record<string, { id: string; text: string; completed: boolean }[]> = {
-      m1: [
-        { id: 'dc1_1', text: 'Duyệt kế hoạch ngân sách quảng cáo tuần tới', completed: true },
-        { id: 'dc1_2', text: 'Họp giao ban định kỳ với các Ban trưởng', completed: false },
-        { id: 'dc1_3', text: 'Duyệt báo cáo hiệu quả chiến dịch Facebook Ads', completed: false },
-      ],
-      m2: [
-        { id: 'dc2_1', text: 'Hoàn thành 3 bài viết PR nhãn hàng mới', completed: true },
-        { id: 'dc2_2', text: 'Lên outline content TikTok tuần 1 tháng 6', completed: true },
-        { id: 'dc2_3', text: 'Họp brainstorm ý tưởng mini-game Fanpage', completed: false },
-      ],
-      m3: [
-        { id: 'dc3_1', text: 'Thiết kế ấn phẩm banner chính cho website', completed: true },
-        { id: 'dc3_2', text: 'Chỉnh sửa layout Key Visual theo feedback', completed: false },
-        { id: 'dc3_3', text: 'Đóng gói tài nguyên thiết kế gửi dev', completed: false },
-      ],
-      m4: [
-        { id: 'dc4_1', text: 'Kiểm tra tỷ lệ chuyển đổi Google Ads', completed: true },
-        { id: 'dc4_2', text: 'Tối ưu bid chiến dịch quảng cáo TikTok', completed: false },
-      ],
-      m5: [
-        { id: 'dc5_1', text: 'Liên hệ 5 bên KOLs review sản phẩm', completed: true },
-        { id: 'dc5_2', text: 'Gửi thiệp mời họp báo ra mắt offline', completed: false },
-      ],
-      m6: [
-        { id: 'dc6_1', text: 'Lên kịch bản chi tiết cho 2 video TikTok', completed: true },
-        { id: 'dc6_2', text: 'Quay thô video review sản phẩm tại văn phòng', completed: false },
-      ],
-    };
     localStorage.setItem('mkt_daily_checklists', JSON.stringify(initialChecklists));
     return initialChecklists;
   });
+
+  const dailyChecklists = passedDailyChecklists && Object.keys(passedDailyChecklists).length > 0 
+    ? passedDailyChecklists 
+    : internalChecklists;
+
+  const setDailyChecklists = (updater: Record<string, { id: string; text: string; completed: boolean }[]> | ((prev: Record<string, { id: string; text: string; completed: boolean }[]>) => Record<string, { id: string; text: string; completed: boolean }[]>)) => {
+    const currentList = dailyChecklists;
+    const nextValue = typeof updater === 'function' ? updater(currentList) : updater;
+    
+    if (onUpdateDailyChecklists) {
+      onUpdateDailyChecklists(nextValue);
+    } else {
+      setInternalChecklists(nextValue);
+      localStorage.setItem('mkt_daily_checklists', JSON.stringify(nextValue));
+    }
+  };
 
   useEffect(() => {
     localStorage.setItem('mkt_daily_checklists', JSON.stringify(dailyChecklists));
