@@ -126,7 +126,20 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [members, setMembers] = useState<Member[]>([]);
+  const [members, setMembers] = useState<Member[]>(() => {
+    const cached = localStorage.getItem('mkt_members');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((m: any) => m.password ? m : { ...m, password: '123' });
+        }
+      } catch (e) {
+        console.error("Error loading cached members synchronously:", e);
+      }
+    }
+    return INITIAL_MEMBERS;
+  });
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [notification, setNotification] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -148,16 +161,31 @@ export default function App() {
 
   // RBAC System States
   const [currentUser, setCurrentUser] = useState<Member>(() => {
+    const cachedMembers = localStorage.getItem('mkt_members');
+    let useMembers = INITIAL_MEMBERS;
+    if (cachedMembers) {
+      try {
+        const parsed = JSON.parse(cachedMembers);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          useMembers = parsed.map((m: any) => m.password ? m : { ...m, password: '123' });
+        }
+      } catch (e) {}
+    }
+
     const cached = localStorage.getItem('mkt_current_user');
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
-        if (parsed && parsed.systemRole) return parsed;
+        if (parsed && parsed.systemRole) {
+          const freshUser = useMembers.find((m: any) => m.id === parsed.id);
+          if (freshUser) return freshUser;
+          return parsed;
+        }
       } catch (e) {
         console.error("Error parsing cached user:", e);
       }
     }
-    return INITIAL_MEMBERS.find(m => m.systemRole === 'Admin') || INITIAL_MEMBERS[0];
+    return useMembers.find((m: any) => m.systemRole === 'Admin') || useMembers[0];
   });
 
   const [rolePermissions, setRolePermissions] = useState<Record<SystemRole, RolePermissions>>(() => {
@@ -311,18 +339,7 @@ export default function App() {
     if (members && members.length > 0 && currentUser) {
       const freshUser = members.find(m => m.id === currentUser.id);
       if (freshUser) {
-        if (
-          freshUser.name !== currentUser.name ||
-          freshUser.role !== currentUser.role ||
-          freshUser.email !== currentUser.email ||
-          freshUser.password !== currentUser.password ||
-          freshUser.division !== currentUser.division ||
-          freshUser.systemRole !== currentUser.systemRole ||
-          freshUser.avatar !== currentUser.avatar ||
-          freshUser.efficiencyScore !== currentUser.efficiencyScore ||
-          freshUser.phone !== currentUser.phone ||
-          freshUser.birthDate !== currentUser.birthDate
-        ) {
+        if (JSON.stringify(freshUser) !== JSON.stringify(currentUser)) {
           setCurrentUser(freshUser);
           localStorage.setItem('mkt_current_user', JSON.stringify(freshUser));
         }
