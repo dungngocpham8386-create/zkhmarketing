@@ -80,6 +80,7 @@ interface TeamPerformanceProps {
   onClearAllDivisions?: () => void;
   onUpdateMember?: (id: string, updatedFields: Partial<Member>) => void;
   onDeleteMember?: (id: string) => void;
+  onSyncAndClearMockUsers?: () => void;
 }
 
 export default function TeamPerformance({ 
@@ -94,7 +95,8 @@ export default function TeamPerformance({
   onDeleteDivision,
   onClearAllDivisions,
   onUpdateMember,
-  onDeleteMember
+  onDeleteMember,
+  onSyncAndClearMockUsers
 }: TeamPerformanceProps) {
   const divisions = passedDivisions || ['Content', 'Design', 'Digital Ads', 'Event & PR'];
   const permissions = passedPermissions || {
@@ -471,16 +473,26 @@ export default function TeamPerformance({
 
             {permissions.team_add_member ? (
               <div className="flex gap-2">
+                {onSyncAndClearMockUsers && (
+                  <button
+                    onClick={onSyncAndClearMockUsers}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 hover:text-amber-850 text-xs font-semibold ring-1 ring-amber-200 shadow-sm transition cursor-pointer"
+                    title="Xóa nhanh tất cả người dùng giả lập & đồng bộ hóa tài khoản"
+                  >
+                    <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+                    <span>Đồng bộ & Dọn dẹp giả lập</span>
+                  </button>
+                )}
                 <button
                   onClick={() => setIsAddDivisionOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-4.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-indigo-700 hover:text-indigo-850 text-xs font-semibold ring-1 ring-slate-200 shadow-sm transition"
+                  className="inline-flex items-center gap-1.5 px-4.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-indigo-700 hover:text-indigo-850 text-xs font-semibold ring-1 ring-slate-200 shadow-sm transition cursor-pointer"
                 >
                   <PlusCircle className="w-4 h-4 text-indigo-500" />
                   Tạo phân ban mới
                 </button>
                 <button
                   onClick={() => setIsAddOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-4.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition"
+                  className="inline-flex items-center gap-1.5 px-4.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition cursor-pointer"
                 >
                   <UserPlus className="w-4 h-4" />
                   Thêm nhân viên

@@ -132,7 +132,12 @@ export default function App() {
       try {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((m: any) => m.password ? m : { ...m, password: '123' });
+          return parsed.map((m: any) => {
+            if (m.id === 'm1' && m.email && m.email.endsWith('@gmail.co')) {
+              return { ...m, email: 'dungngocpham8386@gmail.com', password: m.password || '123' };
+            }
+            return m.password ? m : { ...m, password: '123' };
+          });
         }
       } catch (e) {
         console.error("Error loading cached members synchronously:", e);
@@ -167,7 +172,12 @@ export default function App() {
       try {
         const parsed = JSON.parse(cachedMembers);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          useMembers = parsed.map((m: any) => m.password ? m : { ...m, password: '123' });
+          useMembers = parsed.map((m: any) => {
+            if (m.id === 'm1' && m.email && m.email.endsWith('@gmail.co')) {
+              return { ...m, email: 'dungngocpham8386@gmail.com', password: m.password || '123' };
+            }
+            return m.password ? m : { ...m, password: '123' };
+          });
         }
       } catch (e) {}
     }
@@ -179,6 +189,9 @@ export default function App() {
         if (parsed && parsed.systemRole) {
           const freshUser = useMembers.find((m: any) => m.id === parsed.id);
           if (freshUser) return freshUser;
+          if (parsed.id === 'm1' && parsed.email && parsed.email.endsWith('@gmail.co')) {
+            return { ...parsed, email: 'dungngocpham8386@gmail.com' };
+          }
           return parsed;
         }
       } catch (e) {
@@ -266,7 +279,12 @@ export default function App() {
       try {
         const parsed: Member[] = JSON.parse(cachedMembers);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const migrated = parsed.map(m => m.password ? m : { ...m, password: '123' });
+          const migrated = parsed.map(m => {
+            if (m.id === 'm1' && m.email && m.email.endsWith('@gmail.co')) {
+              return { ...m, email: 'dungngocpham8386@gmail.com', password: m.password || '123' };
+            }
+            return m.password ? m : { ...m, password: '123' };
+          });
           setMembers(migrated);
           finalMembers = migrated;
           loadedFromCache = true;
@@ -733,6 +751,41 @@ export default function App() {
     saveTasks(updatedTasks);
 
     triggerNotification(`Đã xóa thành viên "${memberToDelete.name}" khỏi phòng ban.`);
+  };
+
+  const handleSyncAndClearMockUsers = () => {
+    // 1. Reconstruct admin to have correct spelling 'dungngocpham8386@gmail.com' and roles
+    const adminUser = members.find(m => m.id === 'm1') || INITIAL_MEMBERS[0];
+    const syncedAdmin: Member = {
+      ...adminUser,
+      id: 'm1',
+      name: 'Phạm Ngọc Dũng',
+      email: 'dungngocpham8386@gmail.com', // Correct exact suffix
+      password: adminUser.password || '123',
+      systemRole: 'Admin',
+      role: 'Trưởng phòng Marketing',
+      division: 'Digital Ads'
+    };
+
+    // 2. Set members list to ONLY contain the synced real administrative user
+    const newMembersList = [syncedAdmin];
+    saveMembers(newMembersList);
+
+    // 3. Sync currentUser immediately
+    setCurrentUser(syncedAdmin);
+    localStorage.setItem('mkt_current_user', JSON.stringify(syncedAdmin));
+
+    // 4. Update task assignee ids for deleted mock users to empty (unassigned)
+    const updatedTasks = tasks.map(t => {
+      if (t.assigneeId && t.assigneeId !== 'm1') {
+        return { ...t, assigneeId: '' };
+      }
+      return t;
+    });
+    saveTasks(updatedTasks);
+
+    // 5. Save and synchronize
+    triggerNotification('🧹 Đã dọn dẹp toàn bộ tài khoản giả lập & đồng bộ Admin @gmail.com thành công!');
   };
 
   // --- Invoice Operations ---
@@ -1304,6 +1357,7 @@ export default function App() {
                 onClearAllDivisions={handleClearAllDivisions}
                 onUpdateMember={handleUpdateMember}
                 onDeleteMember={handleDeleteMember}
+                onSyncAndClearMockUsers={handleSyncAndClearMockUsers}
               />
             )}
 
