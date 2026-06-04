@@ -232,22 +232,23 @@ export default function App() {
     const cachedInvoices = localStorage.getItem('mkt_invoices');
 
     let finalMembers = INITIAL_MEMBERS;
-    let shouldResetAllData = false;
+    let loadedFromCache = false;
 
     if (cachedMembers) {
       try {
         const parsed: Member[] = JSON.parse(cachedMembers);
-        if (parsed.some(m => m.email === 'hai.nguyen@marketing.co')) {
-          shouldResetAllData = true;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const migrated = parsed.map(m => m.password ? m : { ...m, password: '123' });
+          setMembers(migrated);
+          finalMembers = migrated;
+          loadedFromCache = true;
         }
       } catch (e) {
-        shouldResetAllData = true;
+        console.error("Error loading cached members:", e);
       }
-    } else {
-      shouldResetAllData = true;
     }
 
-    if (shouldResetAllData) {
+    if (!loadedFromCache) {
       setMembers(INITIAL_MEMBERS);
       localStorage.setItem('mkt_members', JSON.stringify(INITIAL_MEMBERS));
       localStorage.setItem('mkt_current_user', JSON.stringify(INITIAL_MEMBERS[0]));
@@ -255,17 +256,11 @@ export default function App() {
       setIsAuthenticated(false);
       localStorage.setItem('mkt_is_authenticated', 'false');
       finalMembers = INITIAL_MEMBERS;
-    } else {
-      const parsed: Member[] = JSON.parse(cachedMembers!);
-      const migrated = parsed.map(m => m.password ? m : { ...m, password: '123' });
-      setMembers(migrated);
-      localStorage.setItem('mkt_members', JSON.stringify(migrated));
-      finalMembers = migrated;
     }
 
     // Đồng bộ hóa trạng thái tài khoản đăng nhập (currentUser) để luôn khớp với danh sách thành viên sau khi chỉnh sửa
     const savedUserStr = localStorage.getItem('mkt_current_user');
-    if (savedUserStr && !shouldResetAllData) {
+    if (savedUserStr) {
       try {
         const savedUserSnapshot = JSON.parse(savedUserStr) as Member;
         const freshUser = finalMembers.find(m => m.id === savedUserSnapshot.id);
@@ -278,7 +273,7 @@ export default function App() {
       }
     }
 
-    if (shouldResetAllData || !cachedTasks) {
+    if (!loadedFromCache || !cachedTasks) {
       // For demonstration, let's set t3 deadline to tomorrow (within 24 hours of today)
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);

@@ -668,7 +668,7 @@ export default function TeamPerformance({
                         ratingText = 'Đạt chỉ tiêu';
                       }
 
-                      const isSecuredAdmin = emp.systemRole === 'Admin' && currentUser.systemRole !== 'Admin';
+                      const isSecuredAdmin = false;
                       const isCurrentUser = emp.id === currentUser.id;
 
                       return (
@@ -886,7 +886,7 @@ export default function TeamPerformance({
                       ratingText = 'Đạt chỉ tiêu kế hoạch';
                     }
 
-                    const isSecuredAdmin = emp.systemRole === 'Admin' && currentUser.systemRole !== 'Admin';
+                    const isSecuredAdmin = false;
 
                     const isCurrentUser = emp.id === currentUser.id;
 
