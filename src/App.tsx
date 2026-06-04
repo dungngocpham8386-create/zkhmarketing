@@ -22,7 +22,8 @@ import {
   ShieldCheck,
   Link2,
   GitBranch,
-  Key
+  Key,
+  RefreshCw
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 
@@ -156,6 +157,118 @@ export default function App() {
   const [notification, setNotification] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [isNotifDropdownOpen, setIsNotifDropdownOpen] = useState(false);
+
+  // Synchronization with Express full-stack backend server
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+
+  // Sync state function can represent either a full push/pull or differential merge
+  const syncWithServer = async (clientDataToPush?: {
+    members?: Member[];
+    tasks?: Task[];
+    invoices?: Invoice[];
+    divisions?: string[];
+    notifications?: AppNotification[];
+  }) => {
+    setIsSyncing(true);
+    setSyncError(null);
+    try {
+      if (clientDataToPush) {
+        // Push client changes to server
+        const res = await fetch('/api/sync', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(clientDataToPush)
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            setLastSyncTime(new Date());
+          }
+        } else {
+          throw new Error("HTTP " + res.status);
+        }
+      } else {
+        // Fetch from server database
+        const res = await fetch('/api/sync');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.members && data.members.length > 0) {
+            // Load and merge with local state
+            setMembers(data.members);
+            localStorage.setItem('mkt_members', JSON.stringify(data.members));
+            
+            if (data.tasks) {
+              setTasks(data.tasks);
+              localStorage.setItem('mkt_tasks', JSON.stringify(data.tasks));
+            }
+            if (data.invoices) {
+              setInvoices(data.invoices);
+              localStorage.setItem('mkt_invoices', JSON.stringify(data.invoices));
+            }
+            if (data.divisions) {
+              setDivisions(data.divisions);
+              localStorage.setItem('mkt_divisions', JSON.stringify(data.divisions));
+            }
+            if (data.notifications) {
+              setNotifications(data.notifications);
+              localStorage.setItem('mkt_notifications', JSON.stringify(data.notifications));
+            }
+            
+            // Sync current user context
+            const savedUserStr = localStorage.getItem('mkt_current_user');
+            if (savedUserStr) {
+              const savedUserSnapshot = JSON.parse(savedUserStr);
+              const freshUser = data.members.find((m: any) => m.id === savedUserSnapshot.id);
+              if (freshUser) {
+                setCurrentUser(freshUser);
+                localStorage.setItem('mkt_current_user', JSON.stringify(freshUser));
+              }
+            } else if (data.members.length > 0) {
+              setCurrentUser(data.members[0]);
+              localStorage.setItem('mkt_current_user', JSON.stringify(data.members[0]));
+            }
+            setLastSyncTime(new Date());
+          } else {
+            // Server database has no records yet!
+            // Push our complete state to populate the server database
+            const locMembers = JSON.parse(localStorage.getItem('mkt_members') || '[]');
+            const locTasks = JSON.parse(localStorage.getItem('mkt_tasks') || '[]');
+            const locInvoices = JSON.parse(localStorage.getItem('mkt_invoices') || '[]');
+            const locDivisions = JSON.parse(localStorage.getItem('mkt_divisions') || '[]');
+            const locNotifications = JSON.parse(localStorage.getItem('mkt_notifications') || '[]');
+            
+            const payload = {
+              members: locMembers.length > 0 ? locMembers : INITIAL_MEMBERS,
+              tasks: locTasks.length > 0 ? locTasks : INITIAL_TASKS,
+              invoices: locInvoices.length > 0 ? locInvoices : INITIAL_INVOICES,
+              divisions: locDivisions.length > 0 ? locDivisions : ['Content', 'Design', 'Digital Ads', 'Event & PR'],
+              notifications: locNotifications.length > 0 ? locNotifications : []
+            };
+            
+            await fetch('/api/sync', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(payload)
+            });
+            setLastSyncTime(new Date());
+          }
+        } else {
+          throw new Error("HTTP " + res.status);
+        }
+      }
+    } catch (err: any) {
+      console.error("Sync error:", err);
+      setSyncError("Lỗi kết nối bộ đồng bộ đám mây.");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
   
   // Authentication configuration and session login states
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
@@ -254,6 +367,7 @@ export default function App() {
   const saveDivisions = (newDivs: string[]) => {
     setDivisions(newDivs);
     localStorage.setItem('mkt_divisions', JSON.stringify(newDivs));
+    syncWithServer({ divisions: newDivs });
   };
 
   const handleAddDivision = (newDiv: string) => {
@@ -369,6 +483,17 @@ export default function App() {
       setNotifications(INITIAL_NOTIFICATIONS);
       localStorage.setItem('mkt_notifications', JSON.stringify(INITIAL_NOTIFICATIONS));
     }
+  }, []);
+
+  // Poll server for periodic synchronization updates (multi-user real-time sync)
+  useEffect(() => {
+    syncWithServer(); // Pull instantly on mount
+    const interval = setInterval(() => {
+      if (!document.hidden && !isSyncing) {
+        syncWithServer();
+      }
+    }, 7000);
+    return () => clearInterval(interval);
   }, []);
 
   // Tự động đồng bộ hóa thông tin tài khoản đăng nhập (currentUser) bất cứ khi nào danh sách thành viên (members) có thay đổi thông tin
@@ -539,21 +664,25 @@ export default function App() {
   const saveNotifications = (newNotifs: AppNotification[]) => {
     setNotifications(newNotifs);
     localStorage.setItem('mkt_notifications', JSON.stringify(newNotifs));
+    syncWithServer({ notifications: newNotifs });
   };
 
   const saveTasks = (newTasks: Task[]) => {
     setTasks(newTasks);
     localStorage.setItem('mkt_tasks', JSON.stringify(newTasks));
+    syncWithServer({ tasks: newTasks });
   };
 
   const saveMembers = (newMembers: Member[]) => {
     setMembers(newMembers);
     localStorage.setItem('mkt_members', JSON.stringify(newMembers));
+    syncWithServer({ members: newMembers });
   };
 
   const saveInvoices = (newInvoices: Invoice[]) => {
     setInvoices(newInvoices);
     localStorage.setItem('mkt_invoices', JSON.stringify(newInvoices));
+    syncWithServer({ invoices: newInvoices });
   };
 
   // Notification utility
@@ -1072,6 +1201,25 @@ export default function App() {
             {/* Right Quick Header User Controls */}
             <div className="flex items-center gap-3">
               
+              {/* Cloud Synchronization Indicator */}
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-705 select-none transition-all">
+                <span className="relative flex h-2 w-2">
+                  {isSyncing && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>}
+                  <span className={`relative inline-flex rounded-full h-2 w-2 ${isSyncing ? 'bg-amber-500' : syncError ? 'bg-rose-500' : 'bg-emerald-500'}`}></span>
+                </span>
+                <span className="text-[11px] text-slate-600 font-medium">
+                  {isSyncing ? 'Đang đồng bộ...' : syncError ? 'Lỗi kết nối' : 'Đồng bộ đám mây'}
+                </span>
+                <button 
+                  onClick={() => syncWithServer()} 
+                  disabled={isSyncing} 
+                  className={`p-0.5 text-slate-400 hover:text-indigo-600 transition-all rounded-md focus:outline-none ${isSyncing ? 'opacity-50' : 'cursor-pointer'}`}
+                  title="Đồng bộ thủ công"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+
               {/* Real-time System Time Stamp */}
               <div className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-[11px] font-mono text-slate-650">
                 <CalendarDays className="w-3.5 h-3.5 text-slate-400" />
