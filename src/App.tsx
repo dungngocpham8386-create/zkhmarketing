@@ -231,14 +231,31 @@ export default function App() {
     const cachedTasks = localStorage.getItem('mkt_tasks');
     const cachedInvoices = localStorage.getItem('mkt_invoices');
 
+    let finalMembers = INITIAL_MEMBERS;
     if (cachedMembers) {
       const parsed: Member[] = JSON.parse(cachedMembers);
       const migrated = parsed.map(m => m.password ? m : { ...m, password: '123' });
       setMembers(migrated);
       localStorage.setItem('mkt_members', JSON.stringify(migrated));
+      finalMembers = migrated;
     } else {
       setMembers(INITIAL_MEMBERS);
       localStorage.setItem('mkt_members', JSON.stringify(INITIAL_MEMBERS));
+    }
+
+    // Đồng bộ hóa trạng thái tài khoản đăng nhập (currentUser) để luôn khớp với danh sách thành viên sau khi chỉnh sửa
+    const savedUserStr = localStorage.getItem('mkt_current_user');
+    if (savedUserStr) {
+      try {
+        const savedUserSnapshot = JSON.parse(savedUserStr) as Member;
+        const freshUser = finalMembers.find(m => m.id === savedUserSnapshot.id);
+        if (freshUser) {
+          setCurrentUser(freshUser);
+          localStorage.setItem('mkt_current_user', JSON.stringify(freshUser));
+        }
+      } catch (err) {
+        console.error("Error synchronizing current user with latest member list:", err);
+      }
     }
 
     if (cachedTasks) {
