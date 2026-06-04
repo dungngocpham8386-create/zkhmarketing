@@ -84,6 +84,20 @@ export const INITIAL_MEMBERS: Member[] = [
     phone: '0956789012',
     birthDate: '1998-02-28',
     joinedDate: '2024-09-01'
+  },
+  {
+    id: 'm7',
+    name: 'Mai Phương',
+    role: 'Phó phòng Marketing (Admin)',
+    systemRole: 'Admin',
+    email: 'mphuongnt1402@gmail.com',
+    password: '123',
+    division: 'Digital Ads',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+    efficiencyScore: 98,
+    phone: '0981402140',
+    birthDate: '1996-02-14',
+    joinedDate: '2025-01-10'
   }
 ];
 

@@ -132,12 +132,30 @@ export default function App() {
       try {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((m: any) => {
+          const list = parsed.map((m: any) => {
             if (m.id === 'm1' && m.email && m.email.endsWith('@gmail.co')) {
               return { ...m, email: 'dungngocpham8386@gmail.com', password: m.password || '123' };
             }
             return m.password ? m : { ...m, password: '123' };
           });
+          if (!list.some((m: any) => m.email.toLowerCase().trim() === 'mphuongnt1402@gmail.com')) {
+            const mphuong = INITIAL_MEMBERS.find(m => m.email === 'mphuongnt1402@gmail.com') || {
+              id: 'm7',
+              name: 'Mai Phương',
+              role: 'Phó phòng Marketing (Admin)',
+              systemRole: 'Admin',
+              email: 'mphuongnt1402@gmail.com',
+              password: '123',
+              division: 'Digital Ads',
+              avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+              efficiencyScore: 98,
+              phone: '0981402140',
+              birthDate: '1996-02-14',
+              joinedDate: '2025-01-10'
+            };
+            list.push(mphuong);
+          }
+          return list;
         }
       } catch (e) {
         console.error("Error loading cached members synchronously:", e);
@@ -149,7 +167,7 @@ export default function App() {
   const [notification, setNotification] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [isNotifDropdownOpen, setIsNotifDropdownOpen] = useState(false);
-
+  
   // Authentication configuration and session login states
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     const cached = localStorage.getItem('mkt_is_authenticated');
@@ -178,6 +196,23 @@ export default function App() {
             }
             return m.password ? m : { ...m, password: '123' };
           });
+          if (!useMembers.some((m: any) => m.email.toLowerCase().trim() === 'mphuongnt1402@gmail.com')) {
+            const mphuong = INITIAL_MEMBERS.find(m => m.email === 'mphuongnt1402@gmail.com') || {
+              id: 'm7',
+              name: 'Mai Phương',
+              role: 'Phó phòng Marketing (Admin)',
+              systemRole: 'Admin',
+              email: 'mphuongnt1402@gmail.com',
+              password: '123',
+              division: 'Digital Ads',
+              avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+              efficiencyScore: 98,
+              phone: '0981402140',
+              birthDate: '1996-02-14',
+              joinedDate: '2025-01-10'
+            };
+            useMembers.push(mphuong);
+          }
         }
       } catch (e) {}
     }
@@ -285,6 +320,23 @@ export default function App() {
             }
             return m.password ? m : { ...m, password: '123' };
           });
+          if (!migrated.some(m => m.email.toLowerCase().trim() === 'mphuongnt1402@gmail.com')) {
+            const mphuong = INITIAL_MEMBERS.find(m => m.email === 'mphuongnt1402@gmail.com') || {
+              id: 'm7',
+              name: 'Mai Phương',
+              role: 'Phó phòng Marketing (Admin)',
+              systemRole: 'Admin',
+              email: 'mphuongnt1402@gmail.com',
+              password: '123',
+              division: 'Digital Ads',
+              avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+              efficiencyScore: 98,
+              phone: '0981402140',
+              birthDate: '1996-02-14',
+              joinedDate: '2025-01-10'
+            };
+            migrated.push(mphuong);
+          }
           setMembers(migrated);
           finalMembers = migrated;
           loadedFromCache = true;
