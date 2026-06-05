@@ -11,13 +11,20 @@ async function startServer() {
   app.use(express.json({ limit: "10mb" }));
 
   const DB_PATH = path.join(process.cwd(), "db.json");
+  let cacheDB: any = null;
 
-  // Helper to read database safely
+  // Helper to read database safely with memory caching
   function readDB() {
+    if (cacheDB) {
+      return cacheDB;
+    }
     try {
       if (fs.existsSync(DB_PATH)) {
         const data = fs.readFileSync(DB_PATH, "utf-8");
-        return JSON.parse(data);
+        if (data && data.trim()) {
+          cacheDB = JSON.parse(data);
+          return cacheDB;
+        }
       }
     } catch (error) {
       console.error("Error reading db.json database:", error);
@@ -27,6 +34,7 @@ async function startServer() {
 
   // Helper to write database safely
   function writeDB(data: any) {
+    cacheDB = data;
     try {
       fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), "utf-8");
     } catch (error) {

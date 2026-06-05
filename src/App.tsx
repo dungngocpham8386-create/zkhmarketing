@@ -172,6 +172,13 @@ export default function App() {
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [lastLocalWrite, setLastLocalWrite] = useState<number>(0);
 
+  const isSyncingActiveRef = React.useRef(false);
+  const lastLocalWriteRef = React.useRef(0);
+
+  useEffect(() => {
+    lastLocalWriteRef.current = lastLocalWrite;
+  }, [lastLocalWrite]);
+
   const saveDailyChecklists = (newChecklists: Record<string, { id: string; text: string; completed: boolean }[]>) => {
     setLastLocalWrite(Date.now());
     setDailyChecklists(newChecklists);
@@ -188,6 +195,12 @@ export default function App() {
     notifications?: AppNotification[];
     dailyChecklists?: Record<string, { id: string; text: string; completed: boolean }[]>;
   }) => {
+    // Prevent overlapping background sync (get) requests
+    if (isSyncingActiveRef.current && !clientDataToPush) {
+      return;
+    }
+
+    isSyncingActiveRef.current = true;
     setIsSyncing(true);
     setSyncError(null);
     try {
@@ -254,7 +267,8 @@ export default function App() {
       } else {
         // Fetch from server database
         // Prevent background overwrite if user recently engaged in local edits to avoid flickering / state overrides
-        if (Date.now() - lastLocalWrite < 3500) {
+        if (Date.now() - lastLocalWriteRef.current < 3500) {
+          isSyncingActiveRef.current = false;
           setIsSyncing(false);
           return;
         }
@@ -338,6 +352,7 @@ export default function App() {
       console.error("Sync error:", err);
       setSyncError("Lỗi kết nối bộ đồng bộ đám mây.");
     } finally {
+      isSyncingActiveRef.current = false;
       setIsSyncing(false);
     }
   };
@@ -562,7 +577,7 @@ export default function App() {
   useEffect(() => {
     syncWithServer(); // Pull instantly on mount
     const interval = setInterval(() => {
-      if (!document.hidden && !isSyncing) {
+      if (!document.hidden && !isSyncingActiveRef.current) {
         syncWithServer();
       }
     }, 2000);
