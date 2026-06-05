@@ -100,6 +100,16 @@ const INITIAL_NOTIFICATIONS: AppNotification[] = [
   }
 ];
 
+const safeParse = (key: string, fallback: any) => {
+  try {
+    const val = localStorage.getItem(key);
+    if (!val || val === 'undefined' || val === 'null' || val === '[object Object]') return fallback;
+    return JSON.parse(val);
+  } catch (e) {
+    return fallback;
+  }
+};
+
 export default function App() {
   const [appTime, setAppTime] = useState<Date>(new Date());
   useEffect(() => {
@@ -128,28 +138,21 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [members, setMembers] = useState<Member[]>(() => {
-    const cached = localStorage.getItem('mkt_members');
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const list = parsed.map((m: any) => {
-            if (m.id === 'm1' && m.email && m.email.endsWith('@gmail.co')) {
-              return { ...m, email: 'dungngocpham8386@gmail.com', password: m.password || '123' };
-            }
-            return m.password ? m : { ...m, password: '123' };
-          }).filter((m: any) => m.email && m.email.toLowerCase().trim().endsWith('@gmail.com'));
-          // Auto-merge all predefined accounts from INITIAL_MEMBERS if they are missing from list
-          INITIAL_MEMBERS.forEach((initMem) => {
-            if (!list.some((m: any) => m.email.toLowerCase().trim() === initMem.email.toLowerCase().trim())) {
-              list.push(initMem);
-            }
-          });
-          return list;
+    const parsed = safeParse('mkt_members', null);
+    if (parsed && Array.isArray(parsed) && parsed.length > 0) {
+      const list = parsed.map((m: any) => {
+        if (m.id === 'm1' && m.email && m.email.endsWith('@gmail.co')) {
+          return { ...m, email: 'dungngocpham8386@gmail.com', password: m.password || '123' };
         }
-      } catch (e) {
-        console.error("Error loading cached members synchronously:", e);
-      }
+        return m.password ? m : { ...m, password: '123' };
+      }).filter((m: any) => m.email && m.email.toLowerCase().trim().endsWith('@gmail.com'));
+      // Auto-merge all predefined accounts from INITIAL_MEMBERS if they are missing from list
+      INITIAL_MEMBERS.forEach((initMem) => {
+        if (!list.some((m: any) => m.email.toLowerCase().trim() === initMem.email.toLowerCase().trim())) {
+          list.push(initMem);
+        }
+      });
+      return list;
     }
     return INITIAL_MEMBERS;
   });
@@ -159,11 +162,7 @@ export default function App() {
   const [isNotifDropdownOpen, setIsNotifDropdownOpen] = useState(false);
 
   const [dailyChecklists, setDailyChecklists] = useState<Record<string, { id: string; text: string; completed: boolean }[]>>(() => {
-    try {
-      const saved = localStorage.getItem('mkt_daily_checklists');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {}
-    return {};
+    return safeParse('mkt_daily_checklists', {});
   });
 
   // Synchronization with Express full-stack backend server
@@ -176,6 +175,7 @@ export default function App() {
   const lastLocalWriteRef = React.useRef(0);
   const syncRequestIdRef = React.useRef(0);
   const lastSuccessPushTimeRef = React.useRef(0);
+  const consecutiveFailuresRef = React.useRef<number>(0);
 
   useEffect(() => {
     lastLocalWriteRef.current = lastLocalWrite;
@@ -208,18 +208,6 @@ export default function App() {
 
     isSyncingActiveRef.current = true;
     setIsSyncing(true);
-    setSyncError(null);
-
-    // Secure helper to safely parse any potentially corrupted localStorage values
-    const safeParse = (key: string, fallback: any) => {
-      try {
-        const val = localStorage.getItem(key);
-        if (!val || val === 'undefined' || val === 'null' || val === '[object Object]') return fallback;
-        return JSON.parse(val);
-      } catch (e) {
-        return fallback;
-      }
-    };
 
     try {
       if (clientDataToPush) {
@@ -240,6 +228,8 @@ export default function App() {
             }
 
             lastSuccessPushTimeRef.current = Date.now();
+            consecutiveFailuresRef.current = 0;
+            setSyncError(null);
 
             // Instantly update local React and disk storage state with server-authoritative reply
             if (data.members && data.members.length > 0) {
@@ -292,6 +282,8 @@ export default function App() {
             }
 
             setLastSyncTime(new Date());
+          } else {
+            throw new Error("Server returned success: false");
           }
         } else {
           throw new Error("HTTP " + res.status);
@@ -320,6 +312,9 @@ export default function App() {
           }
 
           if (data.success && data.members && data.members.length > 0) {
+            consecutiveFailuresRef.current = 0;
+            setSyncError(null);
+
             // Load and merge with local state
             setMembers(data.members);
             localStorage.setItem('mkt_members', JSON.stringify(data.members));
@@ -380,14 +375,20 @@ export default function App() {
               dailyChecklists: locDailyChecklists
             };
             
-            await fetch('/api/sync', {
+            const postRes = await fetch('/api/sync', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify(payload)
             });
-            setLastSyncTime(new Date());
+            if (postRes.ok) {
+              consecutiveFailuresRef.current = 0;
+              setSyncError(null);
+              setLastSyncTime(new Date());
+            } else {
+              throw new Error("HTTP " + postRes.status + " on initialization push");
+            }
           }
         } else {
           throw new Error("HTTP " + res.status);
@@ -395,7 +396,11 @@ export default function App() {
       }
     } catch (err: any) {
       console.error("Sync error:", err);
-      setSyncError("Lỗi kết nối bộ đồng bộ đám mây.");
+      consecutiveFailuresRef.current += 1;
+      // Only set syncError state if failure persists for 3 consecutive iterations or manual sync fails
+      if (consecutiveFailuresRef.current >= 3 || clientDataToPush) {
+        setSyncError("Lỗi kết nối bộ đồng bộ đám mây.");
+      }
     } finally {
       if (syncRequestIdRef.current === currentId) {
         isSyncingActiveRef.current = false;
@@ -403,7 +408,7 @@ export default function App() {
       }
     }
   };
-  
+
   // Authentication configuration and session login states
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     const cached = localStorage.getItem('mkt_is_authenticated');
@@ -1008,22 +1013,31 @@ export default function App() {
 
   const handleUpdateMember = (id: string, updatedFields: Partial<Member>) => {
     const oldMember = members.find(m => m.id === id);
-    const updated = members.map(m => m.id === id ? { ...m, ...updatedFields } : m);
-    saveMembers(updated);
+    const updatedMembers = members.map(m => m.id === id ? { ...m, ...updatedFields } : m);
 
     // Synchronize tasks assigned to this member if division is changed
     let taskSyncCount = 0;
+    let updatedTasks: Task[] = tasks;
     if (updatedFields.division && oldMember && oldMember.division !== updatedFields.division) {
-      const updatedTasks = tasks.map(t => {
+      updatedTasks = tasks.map(t => {
         if (t.assigneeId === id) {
           taskSyncCount++;
           return { ...t, division: updatedFields.division! };
         }
         return t;
       });
-      if (taskSyncCount > 0) {
-        saveTasks(updatedTasks);
-      }
+    }
+
+    setLastLocalWrite(Date.now());
+    setMembers(updatedMembers);
+    localStorage.setItem('mkt_members', JSON.stringify(updatedMembers));
+
+    if (taskSyncCount > 0) {
+      setTasks(updatedTasks);
+      localStorage.setItem('mkt_tasks', JSON.stringify(updatedTasks));
+      syncWithServer({ members: updatedMembers, tasks: updatedTasks });
+    } else {
+      syncWithServer({ members: updatedMembers });
     }
 
     // If edited user is currently active currentUser, sync its data immediately
