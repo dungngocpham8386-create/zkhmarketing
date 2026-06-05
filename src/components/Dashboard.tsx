@@ -174,9 +174,9 @@ export default function Dashboard({
 
     return Object.entries(divisions).map(([name, data]) => ({
       name,
-      'Đã hoàn thành': data.completed,
-      'Đang thực hiện': data.inProgress,
-      'Chưa bắt đầu': data.todo,
+      'Hoàn thành': data.completed,
+      'Đang làm': data.inProgress,
+      'Đang chờ': data.todo,
       'Tổng số': data.total
     }));
   }, [tasks, divisionsList]);
@@ -510,9 +510,9 @@ export default function Dashboard({
                   itemStyle={{ fontSize: '12px' }}
                 />
                 <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px' }} />
-                <Bar dataKey="Đang thực hiện" stackId="a" fill="#3B82F6" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="Đã hoàn thành" stackId="a" fill="#10B981" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="Chưa bắt đầu" stackId="a" fill="#94A3B8" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Đang làm" stackId="a" fill="#3B82F6" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="Hoàn thành" stackId="a" fill="#10B981" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="Đang chờ" stackId="a" fill="#94A3B8" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

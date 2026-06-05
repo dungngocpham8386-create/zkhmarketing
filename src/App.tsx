@@ -779,13 +779,8 @@ export default function App() {
       createdBy: newTaskFields.createdBy || currentUser.id
     };
     const updated = [newTask, ...tasks];
-    saveTasks(updated);
+    
     const isSelfCreated = newTask.createdBy === newTask.assigneeId;
-    if (isSelfCreated) {
-      triggerNotification(`Đã tạo kế hoạch cá nhân: "${newTask.title}"`);
-    } else {
-      triggerNotification(`Đã giao công việc mới: "${newTask.title}"`);
-    }
 
     // Gửi thông báo về tài khoản của các thành viên trong phòng hoặc người được phân công trực tiếp
     const assigneeName = members.find(m => m.id === newTask.assigneeId)?.name || 'Thành viên mới';
@@ -818,16 +813,34 @@ export default function App() {
       }
     });
 
-    if (newNotifications.length > 0) {
-      saveNotifications([...newNotifications, ...notifications]);
+    const nextNotifications = newNotifications.length > 0 
+      ? [...newNotifications, ...notifications] 
+      : notifications;
+
+    setLastLocalWrite(Date.now());
+    setTasks(updated);
+    localStorage.setItem('mkt_tasks', JSON.stringify(updated));
+
+    if (nextNotifications !== notifications) {
+      setNotifications(nextNotifications);
+      localStorage.setItem('mkt_notifications', JSON.stringify(nextNotifications));
+      syncWithServer({ tasks: updated, notifications: nextNotifications });
+    } else {
+      syncWithServer({ tasks: updated });
+    }
+
+    if (isSelfCreated) {
+      triggerNotification(`Đã tạo kế hoạch cá nhân: "${newTask.title}"`);
+    } else {
+      triggerNotification(`Đã giao công việc mới: "${newTask.title}"`);
     }
   };
 
   const handleUpdateTask = (id: string, updatedFields: Partial<Task>) => {
     const originalTask = tasks.find(t => t.id === id);
     const updated = tasks.map(t => t.id === id ? { ...t, ...updatedFields } : t);
-    saveTasks(updated);
-    triggerNotification('Đã cập nhật thay đổi trạng thái công việc');
+    
+    let nextNotifications = notifications;
 
     if (originalTask) {
       const assigneeId = updatedFields.assigneeId || originalTask.assigneeId;
@@ -871,7 +884,7 @@ export default function App() {
       }
       // TH2: Cập nhật trạng thái công việc (Status updated)
       else if (updatedFields.status && updatedFields.status !== originalTask.status) {
-        const viStatuses = { Todo: 'Đã giao', InProgress: 'Đang thực hiện', Completed: 'Đã hoàn thành' };
+        const viStatuses = { Todo: 'Đang chờ', InProgress: 'Đang làm', Completed: 'Hoàn thành' };
         const statusText = viStatuses[updatedFields.status] || updatedFields.status;
 
         members.forEach(m => {
@@ -892,13 +905,23 @@ export default function App() {
       }
 
       if (updateNotificationsStack.length > 0) {
-        setNotifications(prev => {
-          const merged = [...updateNotificationsStack, ...prev];
-          localStorage.setItem('mkt_notifications', JSON.stringify(merged));
-          return merged;
-        });
+        nextNotifications = [...updateNotificationsStack, ...notifications];
       }
     }
+
+    setLastLocalWrite(Date.now());
+    setTasks(updated);
+    localStorage.setItem('mkt_tasks', JSON.stringify(updated));
+
+    if (nextNotifications !== notifications) {
+      setNotifications(nextNotifications);
+      localStorage.setItem('mkt_notifications', JSON.stringify(nextNotifications));
+      syncWithServer({ tasks: updated, notifications: nextNotifications });
+    } else {
+      syncWithServer({ tasks: updated });
+    }
+
+    triggerNotification('Đã cập nhật thay đổi trạng thái công việc');
   };
 
   const handleDeleteTask = (id: string) => {

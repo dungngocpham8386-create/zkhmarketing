@@ -1,5 +1,5 @@
 export type Priority = 'High' | 'Medium' | 'Low'; // Cao, Trung bình, Thấp
-export type TaskStatus = 'Todo' | 'InProgress' | 'Completed'; // Đã giao, Đang thực hiện, Đã hoàn thành
+export type TaskStatus = 'Todo' | 'InProgress' | 'Completed'; // Đang chờ, Đang làm, Hoàn thành
 export type TaskStage = 'Planning' | 'Production' | 'Execution' | 'Optimization'; // Lập kế hoạch, Sản xuất, Triển khai, Tối ưu
 export type MarketingDivision = string; // Phòng ban / phân ban nội bộ (Hỗ trợ thêm động)
 

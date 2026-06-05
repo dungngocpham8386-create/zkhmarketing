@@ -592,9 +592,9 @@ export default function TaskManager({
               className="w-full p-2.5 bg-slate-50 border border-slate-250 focus:outline-none rounded-lg text-slate-700"
             >
               <option value="All">Tất cả trạng thái</option>
-              <option value="Todo">Đã giao (Chờ làm)</option>
-              <option value="InProgress">Đang thực hiện</option>
-              <option value="Completed">Đã hoàn thành</option>
+              <option value="Todo">Đang chờ</option>
+              <option value="InProgress">Đang làm</option>
+              <option value="Completed">Hoàn thành</option>
             </select>
           </div>
 
@@ -768,9 +768,9 @@ export default function TaskManager({
       {viewMode === 'kanban' ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" id="kanban_board_container">
           {([
-            { status: 'Todo', label: 'Cần làm (Todo)', icon: <Clock className="w-4 h-4 text-slate-500" />, bg: 'bg-slate-50/70', border: 'border-slate-200/60', hoverBg: 'bg-slate-100/85', badgeColor: 'bg-slate-200 text-slate-800' },
-            { status: 'InProgress', label: 'Đang thực hiện (In Progress)', icon: <Sparkles className="w-4 h-4 text-indigo-600" />, bg: 'bg-indigo-50/30', border: 'border-indigo-100/60', hoverBg: 'bg-indigo-50/60', badgeColor: 'bg-indigo-100 text-indigo-800' },
-            { status: 'Completed', label: 'Đã hoàn thành (Completed)', icon: <CheckCircle2 className="w-4 h-4 text-emerald-600" />, bg: 'bg-emerald-50/20', border: 'border-emerald-100/40', hoverBg: 'bg-emerald-50/40', badgeColor: 'bg-emerald-100 text-emerald-800' }
+            { status: 'Todo', label: 'Đang chờ', icon: <Clock className="w-4 h-4 text-slate-500" />, bg: 'bg-slate-50/70', border: 'border-slate-200/60', hoverBg: 'bg-slate-100/85', badgeColor: 'bg-slate-200 text-slate-800' },
+            { status: 'InProgress', label: 'Đang làm', icon: <Sparkles className="w-4 h-4 text-indigo-600" />, bg: 'bg-indigo-50/30', border: 'border-indigo-100/60', hoverBg: 'bg-indigo-50/60', badgeColor: 'bg-indigo-100 text-indigo-800' },
+            { status: 'Completed', label: 'Hoàn thành', icon: <CheckCircle2 className="w-4 h-4 text-emerald-600" />, bg: 'bg-emerald-50/20', border: 'border-emerald-100/40', hoverBg: 'bg-emerald-50/40', badgeColor: 'bg-emerald-100 text-emerald-800' }
           ] as const).map(({ status: columnStatus, label, icon, bg, border, hoverBg, badgeColor }) => {
             const columnTasks = filteredTasks.filter(t => t.status === columnStatus);
             const isHovered = hoveredColumn === columnStatus;
@@ -1081,7 +1081,7 @@ export default function TaskManager({
                         : task.status === 'InProgress' ? 'bg-blue-100 text-blue-800' 
                         : 'bg-slate-100 text-slate-700'
                       }`}>
-                        {task.status === 'Completed' ? 'Đã hoàn thành' : task.status === 'InProgress' ? 'Đang thực hiện' : 'Đã giao'}
+                        {task.status === 'Completed' ? 'Hoàn thành' : task.status === 'InProgress' ? 'Đang làm' : 'Đang chờ'}
                       </span>
                     </div>
                   </div>
@@ -1501,9 +1501,9 @@ export default function TaskManager({
                     onChange={(e) => setStatus(e.target.value as TaskStatus)}
                     className="w-full text-xs p-3 rounded-xl border border-slate-200 focus:outline-none text-slate-950 focus:ring-2 focus:ring-indigo-600"
                   >
-                    <option value="Todo">1. Đã giao (Chờ)</option>
-                    <option value="InProgress">2. Đang thực hiện</option>
-                    <option value="Completed">3. Đã hoàn thành 🎉</option>
+                    <option value="Todo">1. Đang chờ</option>
+                    <option value="InProgress">2. Đang làm</option>
+                    <option value="Completed">3. Hoàn thành 🎉</option>
                   </select>
                 </div>
               </div>
