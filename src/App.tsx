@@ -166,16 +166,18 @@ export default function App() {
     return {};
   });
 
-  const saveDailyChecklists = (newChecklists: Record<string, { id: string; text: string; completed: boolean }[]>) => {
-    setDailyChecklists(newChecklists);
-    localStorage.setItem('mkt_daily_checklists', JSON.stringify(newChecklists));
-    syncWithServer({ dailyChecklists: newChecklists });
-  };
-
   // Synchronization with Express full-stack backend server
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  const [lastLocalWrite, setLastLocalWrite] = useState<number>(0);
+
+  const saveDailyChecklists = (newChecklists: Record<string, { id: string; text: string; completed: boolean }[]>) => {
+    setLastLocalWrite(Date.now());
+    setDailyChecklists(newChecklists);
+    localStorage.setItem('mkt_daily_checklists', JSON.stringify(newChecklists));
+    syncWithServer({ dailyChecklists: newChecklists });
+  };
 
   // Sync state function can represent either a full push/pull or differential merge
   const syncWithServer = async (clientDataToPush?: {
@@ -201,6 +203,49 @@ export default function App() {
         if (res.ok) {
           const data = await res.json();
           if (data.success) {
+            // Instantly update local React and disk storage state with server-authoritative reply
+            if (data.members && data.members.length > 0) {
+              setMembers(data.members);
+              localStorage.setItem('mkt_members', JSON.stringify(data.members));
+            }
+            if (data.tasks) {
+              setTasks(data.tasks);
+              localStorage.setItem('mkt_tasks', JSON.stringify(data.tasks));
+            }
+            if (data.invoices) {
+              setInvoices(data.invoices);
+              localStorage.setItem('mkt_invoices', JSON.stringify(data.invoices));
+            }
+            if (data.divisions) {
+              setDivisions(data.divisions);
+              localStorage.setItem('mkt_divisions', JSON.stringify(data.divisions));
+            }
+            if (data.notifications) {
+              setNotifications(data.notifications);
+              localStorage.setItem('mkt_notifications', JSON.stringify(data.notifications));
+            }
+            if (data.dailyChecklists) {
+              setDailyChecklists(data.dailyChecklists);
+              localStorage.setItem('mkt_daily_checklists', JSON.stringify(data.dailyChecklists));
+            }
+
+            // Sync current user context
+            const savedUserStr = localStorage.getItem('mkt_current_user');
+            if (savedUserStr && data.members) {
+              const savedUserSnapshot = JSON.parse(savedUserStr);
+              const freshUser = data.members.find((m: any) => m.id === savedUserSnapshot.id);
+              if (freshUser) {
+                setCurrentUser(freshUser);
+                localStorage.setItem('mkt_current_user', JSON.stringify(freshUser));
+              }
+            } else if (data.members && data.members.length > 0) {
+              // Fail-safe initialization
+              const savedUserSnapshot = JSON.parse(savedUserStr || '{}');
+              const freshUser = data.members.find((m: any) => m.id === savedUserSnapshot.id) || data.members[0];
+              setCurrentUser(freshUser);
+              localStorage.setItem('mkt_current_user', JSON.stringify(freshUser));
+            }
+
             setLastSyncTime(new Date());
           }
         } else {
@@ -208,6 +253,12 @@ export default function App() {
         }
       } else {
         // Fetch from server database
+        // Prevent background overwrite if user recently engaged in local edits to avoid flickering / state overrides
+        if (Date.now() - lastLocalWrite < 3500) {
+          setIsSyncing(false);
+          return;
+        }
+
         const res = await fetch('/api/sync');
         if (res.ok) {
           const data = await res.json();
@@ -386,6 +437,7 @@ export default function App() {
   });
 
   const saveDivisions = (newDivs: string[]) => {
+    setLastLocalWrite(Date.now());
     setDivisions(newDivs);
     localStorage.setItem('mkt_divisions', JSON.stringify(newDivs));
     syncWithServer({ divisions: newDivs });
@@ -683,24 +735,28 @@ export default function App() {
 
   // Save changes to localStorage on any state modification
   const saveNotifications = (newNotifs: AppNotification[]) => {
+    setLastLocalWrite(Date.now());
     setNotifications(newNotifs);
     localStorage.setItem('mkt_notifications', JSON.stringify(newNotifs));
     syncWithServer({ notifications: newNotifs });
   };
 
   const saveTasks = (newTasks: Task[]) => {
+    setLastLocalWrite(Date.now());
     setTasks(newTasks);
     localStorage.setItem('mkt_tasks', JSON.stringify(newTasks));
     syncWithServer({ tasks: newTasks });
   };
 
   const saveMembers = (newMembers: Member[]) => {
+    setLastLocalWrite(Date.now());
     setMembers(newMembers);
     localStorage.setItem('mkt_members', JSON.stringify(newMembers));
     syncWithServer({ members: newMembers });
   };
 
   const saveInvoices = (newInvoices: Invoice[]) => {
+    setLastLocalWrite(Date.now());
     setInvoices(newInvoices);
     localStorage.setItem('mkt_invoices', JSON.stringify(newInvoices));
     syncWithServer({ invoices: newInvoices });
