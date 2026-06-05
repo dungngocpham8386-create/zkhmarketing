@@ -174,6 +174,8 @@ export default function App() {
 
   const isSyncingActiveRef = React.useRef(false);
   const lastLocalWriteRef = React.useRef(0);
+  const syncRequestIdRef = React.useRef(0);
+  const lastSuccessPushTimeRef = React.useRef(0);
 
   useEffect(() => {
     lastLocalWriteRef.current = lastLocalWrite;
@@ -200,9 +202,25 @@ export default function App() {
       return;
     }
 
+    // Keep track of request order sequence to avoid stale overrides
+    syncRequestIdRef.current += 1;
+    const currentId = syncRequestIdRef.current;
+
     isSyncingActiveRef.current = true;
     setIsSyncing(true);
     setSyncError(null);
+
+    // Secure helper to safely parse any potentially corrupted localStorage values
+    const safeParse = (key: string, fallback: any) => {
+      try {
+        const val = localStorage.getItem(key);
+        if (!val || val === 'undefined' || val === 'null' || val === '[object Object]') return fallback;
+        return JSON.parse(val);
+      } catch (e) {
+        return fallback;
+      }
+    };
+
     try {
       if (clientDataToPush) {
         // Push client changes to server
@@ -216,6 +234,13 @@ export default function App() {
         if (res.ok) {
           const data = await res.json();
           if (data.success) {
+            // Discard response if a newer request has already updated the sequence
+            if (syncRequestIdRef.current !== currentId) {
+              return;
+            }
+
+            lastSuccessPushTimeRef.current = Date.now();
+
             // Instantly update local React and disk storage state with server-authoritative reply
             if (data.members && data.members.length > 0) {
               setMembers(data.members);
@@ -242,21 +267,28 @@ export default function App() {
               localStorage.setItem('mkt_daily_checklists', JSON.stringify(data.dailyChecklists));
             }
 
-            // Sync current user context
+            // Sync current user context safely
             const savedUserStr = localStorage.getItem('mkt_current_user');
-            if (savedUserStr && data.members) {
-              const savedUserSnapshot = JSON.parse(savedUserStr);
-              const freshUser = data.members.find((m: any) => m.id === savedUserSnapshot.id);
-              if (freshUser) {
-                setCurrentUser(freshUser);
-                localStorage.setItem('mkt_current_user', JSON.stringify(freshUser));
-              }
+            if (savedUserStr && savedUserStr !== 'undefined' && data.members) {
+              try {
+                const savedUserSnapshot = JSON.parse(savedUserStr);
+                const freshUser = data.members.find((m: any) => m.id === savedUserSnapshot.id);
+                if (freshUser) {
+                  setCurrentUser(freshUser);
+                  localStorage.setItem('mkt_current_user', JSON.stringify(freshUser));
+                }
+              } catch (e) {}
             } else if (data.members && data.members.length > 0) {
               // Fail-safe initialization
-              const savedUserSnapshot = JSON.parse(savedUserStr || '{}');
-              const freshUser = data.members.find((m: any) => m.id === savedUserSnapshot.id) || data.members[0];
-              setCurrentUser(freshUser);
-              localStorage.setItem('mkt_current_user', JSON.stringify(freshUser));
+              try {
+                const savedUserSnapshot = JSON.parse(savedUserStr || '{}');
+                const freshUser = data.members.find((m: any) => m.id === savedUserSnapshot.id) || data.members[0];
+                setCurrentUser(freshUser);
+                localStorage.setItem('mkt_current_user', JSON.stringify(freshUser));
+              } catch (e) {
+                setCurrentUser(data.members[0]);
+                localStorage.setItem('mkt_current_user', JSON.stringify(data.members[0]));
+              }
             }
 
             setLastSyncTime(new Date());
@@ -267,7 +299,7 @@ export default function App() {
       } else {
         // Fetch from server database
         // Prevent background overwrite if user recently engaged in local edits to avoid flickering / state overrides
-        if (Date.now() - lastLocalWriteRef.current < 3500) {
+        if (Date.now() - lastLocalWriteRef.current < 4000 || Date.now() - lastSuccessPushTimeRef.current < 4000) {
           isSyncingActiveRef.current = false;
           setIsSyncing(false);
           return;
@@ -275,7 +307,18 @@ export default function App() {
 
         const res = await fetch('/api/sync');
         if (res.ok) {
+          // Double check before parsing
+          if (syncRequestIdRef.current !== currentId || Date.now() - lastLocalWriteRef.current < 4000) {
+            return;
+          }
+
           const data = await res.json();
+
+          // Double check after fetch completes to avoid race conditions overriding fresh edits
+          if (syncRequestIdRef.current !== currentId || Date.now() - lastLocalWriteRef.current < 4000) {
+            return;
+          }
+
           if (data.success && data.members && data.members.length > 0) {
             // Load and merge with local state
             setMembers(data.members);
@@ -304,13 +347,15 @@ export default function App() {
             
             // Sync current user context
             const savedUserStr = localStorage.getItem('mkt_current_user');
-            if (savedUserStr) {
-              const savedUserSnapshot = JSON.parse(savedUserStr);
-              const freshUser = data.members.find((m: any) => m.id === savedUserSnapshot.id);
-              if (freshUser) {
-                setCurrentUser(freshUser);
-                localStorage.setItem('mkt_current_user', JSON.stringify(freshUser));
-              }
+            if (savedUserStr && savedUserStr !== 'undefined') {
+              try {
+                const savedUserSnapshot = JSON.parse(savedUserStr);
+                const freshUser = data.members.find((m: any) => m.id === savedUserSnapshot.id);
+                if (freshUser) {
+                  setCurrentUser(freshUser);
+                  localStorage.setItem('mkt_current_user', JSON.stringify(freshUser));
+                }
+              } catch (e) {}
             } else if (data.members.length > 0) {
               setCurrentUser(data.members[0]);
               localStorage.setItem('mkt_current_user', JSON.stringify(data.members[0]));
@@ -319,12 +364,12 @@ export default function App() {
           } else {
             // Server database has no records yet!
             // Push our complete state to populate the server database
-            const locMembers = JSON.parse(localStorage.getItem('mkt_members') || '[]');
-            const locTasks = JSON.parse(localStorage.getItem('mkt_tasks') || '[]');
-            const locInvoices = JSON.parse(localStorage.getItem('mkt_invoices') || '[]');
-            const locDivisions = JSON.parse(localStorage.getItem('mkt_divisions') || '[]');
-            const locNotifications = JSON.parse(localStorage.getItem('mkt_notifications') || '[]');
-            const locDailyChecklists = JSON.parse(localStorage.getItem('mkt_daily_checklists') || '{}');
+            const locMembers = safeParse('mkt_members', []);
+            const locTasks = safeParse('mkt_tasks', []);
+            const locInvoices = safeParse('mkt_invoices', []);
+            const locDivisions = safeParse('mkt_divisions', []);
+            const locNotifications = safeParse('mkt_notifications', []);
+            const locDailyChecklists = safeParse('mkt_daily_checklists', {});
             
             const payload = {
               members: locMembers.length > 0 ? locMembers : INITIAL_MEMBERS,
@@ -352,8 +397,10 @@ export default function App() {
       console.error("Sync error:", err);
       setSyncError("Lỗi kết nối bộ đồng bộ đám mây.");
     } finally {
-      isSyncingActiveRef.current = false;
-      setIsSyncing(false);
+      if (syncRequestIdRef.current === currentId) {
+        isSyncingActiveRef.current = false;
+        setIsSyncing(false);
+      }
     }
   };
   
