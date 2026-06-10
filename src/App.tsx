@@ -28,8 +28,8 @@ import {
 import { AnimatePresence, motion } from 'motion/react';
 
 // Imports types and components
-import { Task, Member, Invoice, SystemRole, RolePermissions, AppNotification } from './types';
-import { INITIAL_MEMBERS, INITIAL_TASKS, INITIAL_INVOICES } from './data/mockData';
+import { Task, Member, Invoice, SystemRole, RolePermissions, AppNotification, DepartmentLink } from './types';
+import { INITIAL_MEMBERS, INITIAL_TASKS, INITIAL_INVOICES, INITIAL_DEPARTMENT_LINKS } from './data/mockData';
 import Dashboard from './components/Dashboard';
 import TaskManager from './components/TaskManager';
 // Removed BillingTracker import
@@ -165,6 +165,12 @@ export default function App() {
     return safeParse('mkt_daily_checklists', {});
   });
 
+  const [departmentLinks, setDepartmentLinks] = useState<DepartmentLink[]>(() => {
+    const parsed = safeParse('mkt_department_links', null);
+    if (parsed && Array.isArray(parsed) && parsed.length > 0) return parsed;
+    return INITIAL_DEPARTMENT_LINKS;
+  });
+
   // Synchronization with Express full-stack backend server
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -188,6 +194,13 @@ export default function App() {
     syncWithServer({ dailyChecklists: newChecklists });
   };
 
+  const saveDepartmentLinks = (newLinks: DepartmentLink[]) => {
+    setLastLocalWrite(Date.now());
+    setDepartmentLinks(newLinks);
+    localStorage.setItem('mkt_department_links', JSON.stringify(newLinks));
+    syncWithServer({ departmentLinks: newLinks });
+  };
+
   // Sync state function can represent either a full push/pull or differential merge
   const syncWithServer = async (clientDataToPush?: {
     members?: Member[];
@@ -196,6 +209,7 @@ export default function App() {
     divisions?: string[];
     notifications?: AppNotification[];
     dailyChecklists?: Record<string, { id: string; text: string; completed: boolean }[]>;
+    departmentLinks?: DepartmentLink[];
   }) => {
     // Prevent overlapping background sync (get) requests
     if (isSyncingActiveRef.current && !clientDataToPush) {
@@ -255,6 +269,10 @@ export default function App() {
             if (data.dailyChecklists) {
               setDailyChecklists(data.dailyChecklists);
               localStorage.setItem('mkt_daily_checklists', JSON.stringify(data.dailyChecklists));
+            }
+            if (data.departmentLinks) {
+              setDepartmentLinks(data.departmentLinks);
+              localStorage.setItem('mkt_department_links', JSON.stringify(data.departmentLinks));
             }
 
             // Sync current user context safely
@@ -339,6 +357,10 @@ export default function App() {
               setDailyChecklists(data.dailyChecklists);
               localStorage.setItem('mkt_daily_checklists', JSON.stringify(data.dailyChecklists));
             }
+            if (data.departmentLinks) {
+              setDepartmentLinks(data.departmentLinks);
+              localStorage.setItem('mkt_department_links', JSON.stringify(data.departmentLinks));
+            }
             
             // Sync current user context
             const savedUserStr = localStorage.getItem('mkt_current_user');
@@ -365,6 +387,7 @@ export default function App() {
             const locDivisions = safeParse('mkt_divisions', []);
             const locNotifications = safeParse('mkt_notifications', []);
             const locDailyChecklists = safeParse('mkt_daily_checklists', {});
+            const locDepartmentLinks = safeParse('mkt_department_links', []);
             
             const payload = {
               members: locMembers.length > 0 ? locMembers : INITIAL_MEMBERS,
@@ -372,7 +395,8 @@ export default function App() {
               invoices: locInvoices.length > 0 ? locInvoices : INITIAL_INVOICES,
               divisions: locDivisions.length > 0 ? locDivisions : ['Content', 'Design', 'Digital Ads', 'Event & PR'],
               notifications: locNotifications.length > 0 ? locNotifications : [],
-              dailyChecklists: locDailyChecklists
+              dailyChecklists: locDailyChecklists,
+              departmentLinks: locDepartmentLinks.length > 0 ? locDepartmentLinks : INITIAL_DEPARTMENT_LINKS
             };
             
             const postRes = await fetch('/api/sync', {
@@ -1717,6 +1741,8 @@ export default function App() {
                 divisions={divisions}
                 members={members}
                 currentUser={currentUser}
+                links={departmentLinks}
+                onUpdateLinks={saveDepartmentLinks}
               />
             )}
           </motion.div>

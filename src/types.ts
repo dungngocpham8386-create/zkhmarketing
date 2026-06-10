@@ -82,3 +82,14 @@ export interface AppNotification {
   taskId?: string;
   senderName?: string;
 }
+
+export interface DepartmentLink {
+  id: string;
+  title: string;
+  url: string;
+  category: 'Document' | 'Spreadsheet' | 'Design' | 'Tool' | 'Other';
+  division: MarketingDivision;
+  description: string;
+  updatedAt: string;
+  updatedBy: string;
+}

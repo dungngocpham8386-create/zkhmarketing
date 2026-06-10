@@ -34,97 +34,25 @@ interface InternalAdminLinksProps {
   divisions: string[];
   members: Member[];
   currentUser: Member;
+  links: DepartmentLink[];
+  onUpdateLinks: (newLinks: DepartmentLink[]) => void;
 }
 
 export default function InternalAdminLinks({ 
   divisions, 
   members, 
-  currentUser 
+  currentUser,
+  links,
+  onUpdateLinks
 }: InternalAdminLinksProps) {
   
-  // Load links from localStorage or set up default files
-  const [links, setLinks] = useState<DepartmentLink[]>(() => {
-    const saved = localStorage.getItem('mkt_department_links');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error("Error parsing link files", e);
-      }
+  const setLinks = (newLinksOrUpdater: DepartmentLink[] | ((prev: DepartmentLink[]) => DepartmentLink[])) => {
+    if (typeof newLinksOrUpdater === 'function') {
+      onUpdateLinks(newLinksOrUpdater(links));
+    } else {
+      onUpdateLinks(newLinksOrUpdater);
     }
-    
-    // Default initial mock data
-    const initialLinks: DepartmentLink[] = [
-      {
-        id: 'lnk-1',
-        title: 'Thư mục Google Drive - Tài nguyên thiết kế Tết 2027',
-        url: 'https://drive.google.com/drive/folders/1brand-guideline-example',
-        category: 'Document',
-        division: 'Design',
-        description: 'Chứa toàn bộ hình ảnh sản phẩm chất lượng cao, file nén (.zip) cho Key Visual chiến dịch Tết và banner quảng cáo.',
-        updatedAt: '2026-05-28T10:30:00Z',
-        updatedBy: 'Phạm Ngọc Dũng'
-      },
-      {
-        id: 'lnk-2',
-        title: 'Figma - UI/UX Portal & App Mockups chính thức',
-        url: 'https://www.figma.com/file/marketing-ui-ux-design-example',
-        category: 'Design',
-        division: 'Design',
-        description: 'Bản vẽ Layout Mobile App & Landing Page cho chương trình khuyến mại lớn mùa hạ 2026.',
-        updatedAt: '2026-05-29T14:20:00Z',
-        updatedBy: 'Phạm Ngọc Dũng'
-      },
-      {
-        id: 'lnk-3',
-        title: 'Google Sheet - Thiết lập Lịch đăng bài Fanpage tháng 6/2026',
-        url: 'https://docs.google.com/spreadsheets/d/1content-planning-june-example',
-        category: 'Spreadsheet',
-        division: 'Content',
-        description: 'Tài liệu tối quan trọng của phòng Content, cập nhật timeline lên bài, phân nhóm Content Pillar chi tiết hàng ngày.',
-        updatedAt: '2026-05-30T09:12:00Z',
-        updatedBy: 'Phạm Ngọc Dũng'
-      },
-      {
-        id: 'lnk-4',
-        title: 'Google Sheet - UTM Tracking & Tạo UTM Link chiến dịch',
-        url: 'https://docs.google.com/spreadsheets/d/1utm-tracking-generator-example',
-        category: 'Spreadsheet',
-        division: 'Digital Ads',
-        description: 'Bảng sinh link UTM tự động cho các đường dẫn chạy Ads để đồng bộ kết quả chuyển đổi lên Google Analytics.',
-        updatedAt: '2026-05-31T16:45:00Z',
-        updatedBy: 'Phạm Ngọc Dũng'
-      },
-      {
-        id: 'lnk-5',
-        title: 'Tài liệu PR & Script Họp Báo giới thiệu Sự kiện 2026',
-        url: 'https://docs.google.com/document/d/1pr-press-release-script-example',
-        category: 'Document',
-        division: 'Event & PR',
-        description: 'Kịch bản chi tiết cho MC, danh sách khách mời báo chí và hướng dẫn trả lời phỏng vấn truyền thông.',
-        updatedAt: '2026-06-01T08:00:00Z',
-        updatedBy: 'Phạm Ngọc Dũng'
-      },
-      {
-        id: 'lnk-6',
-        title: 'Công cụ Convert Ảnh sang định dạng WebP trực tuyến',
-        url: 'https://tinypng.com/',
-        category: 'Tool',
-        division: 'Design',
-        description: 'Trang nén ảnh dung lượng cực tốt giúp tối ưu tốc độ tải trang cho Landing Page marketing.',
-        updatedAt: '2026-05-25T11:05:00Z',
-        updatedBy: 'Phạm Ngọc Dũng'
-      }
-    ];
-
-    localStorage.setItem('mkt_department_links', JSON.stringify(initialLinks));
-    return initialLinks;
-  });
-
-  // Save changes to localStorage whenever state changes
-  useEffect(() => {
-    localStorage.setItem('mkt_department_links', JSON.stringify(links));
-  }, [links]);
+  };
 
   // UI state filters
   const [searchTerm, setSearchTerm] = useState('');
